@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-0.schema.json",
+  "title": "Payload Agent 0 — Coverage Gap Analyzer",
+  "type": "object",
+  "required": ["domain", "coverage_gaps", "coverage_map", "session"],
+  "properties": {
+    "domain": { "type": "string", "minLength": 1 },
+    "coverage_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["route", "domain", "existing_tests", "priority"],
+        "properties": {
+          "route": { "type": "string" },
+          "domain": { "type": "string" },
+          "existing_tests": { "type": "integer", "minimum": 0 },
+          "priority": { "$ref": "envelope.schema.json#/definitions/priority" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "coverage_map": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["domain", "coverage_score"],
+        "properties": {
+          "domain": { "type": "string" },
+          "coverage_score": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": ["role", "storage_state_path", "expires_at"],
+      "properties": {
+        "role": { "type": "string" },
+        "storage_state_path": { "type": "string" },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

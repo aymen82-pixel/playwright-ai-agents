@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-6.schema.json",
+  "title": "Payload Agent 6 — Self-Healing Coordinator",
+  "type": "object",
+  "required": ["fixes", "unresolved"],
+  "properties": {
+    "fixes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["spec", "title", "root_cause", "change", "attempts", "final_status"],
+        "properties": {
+          "spec": { "type": "string" },
+          "title": { "type": "string" },
+          "root_cause": { "enum": ["selector", "timing", "assertion", "data", "app"] },
+          "change": { "type": "string", "description": "description une ligne du correctif" },
+          "attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+          "final_status": { "$ref": "envelope.schema.json#/definitions/test_status" },
+          "selector_updated": {
+            "type": "object",
+            "properties": {
+              "page": { "type": "string" },
+              "label": { "type": "string" },
+              "old": { "type": "string" },
+              "new": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "requalified_bugs": {
+      "type": "array",
+      "description": "Échecs SCRIPT requalifiés PRODUIT après diagnostic (format identique à agent-5 bugs)",
+      "items": { "type": "object" }
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["spec", "title", "reason"],
+        "properties": {
+          "spec": { "type": "string" },
+          "title": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "selectors_updated": { "type": "integer", "minimum": 0 }
+  }
+}

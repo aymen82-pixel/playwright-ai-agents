@@ -1,0 +1,24 @@
+{
+  "$comment": "Permissions + config partagées (committed). Overrides perso : settings.local.json (gitignored).",
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright test:*)",
+      "Bash(npx playwright show-report:*)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run typecheck)",
+      "Read(./**)",
+      "Edit(./tests/**)",
+      "Edit(./pages/**)",
+      "Edit(./fixtures/**)",
+      "Edit(./.qa/**)"
+    ],
+    "deny": [
+      "Edit(./utils/test-data.ts)",
+      "Edit(./playwright.config.ts)",
+      "Read(./.qa/agentdb/sessions/**)",
+      "Read(./.env)"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}

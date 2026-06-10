@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-5.schema.json",
+  "title": "Payload Agent 5 — Test Executor",
+  "type": "object",
+  "required": ["results", "bugs", "summary"],
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "spec", "title", "status", "duration_ms"],
+        "properties": {
+          "id": { "type": "string" },
+          "spec": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "$ref": "envelope.schema.json#/definitions/test_status" },
+          "duration_ms": { "type": "integer", "minimum": 0 },
+          "browser": { "type": "string" },
+          "failure": {
+            "type": "object",
+            "required": ["kind", "message"],
+            "properties": {
+              "kind": { "$ref": "envelope.schema.json#/definitions/failure_kind" },
+              "line": { "type": "integer" },
+              "message": { "type": "string" },
+              "evidence_path": { "type": "string" },
+              "suggested_fix": { "type": "string" }
+            }
+          }
+        },
+        "if": { "properties": { "status": { "const": "KO" } } },
+        "then": { "required": ["failure"] }
+      }
+    },
+    "bugs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "severity", "steps", "expected", "actual"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "severity": { "$ref": "envelope.schema.json#/definitions/priority" },
+          "steps": { "type": "array", "items": { "type": "string" } },
+          "expected": { "type": "string" },
+          "actual": { "type": "string" },
+          "evidence_path": { "type": "string" },
+          "scenario_id": { "type": "string" },
+          "suggested_fix": { "type": "string" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "pass", "fail", "skip", "pass_rate_pct"],
+      "properties": {
+        "total": { "type": "integer" },
+        "pass": { "type": "integer" },
+        "fail": { "type": "integer" },
+        "skip": { "type": "integer" },
+        "pass_rate_pct": { "type": "number" },
+        "flaky_pct": { "type": "number" }
+      }
+    }
+  }
+}

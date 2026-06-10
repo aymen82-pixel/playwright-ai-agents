@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-2.schema.json",
+  "title": "Payload Agent 2 — User Journey Mapper",
+  "type": "object",
+  "required": ["journeys"],
+  "properties": {
+    "journeys": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "feature", "role", "type", "priority", "steps"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^J-\\d{3}[a-z]?$" },
+          "feature": { "type": "string" },
+          "role": { "type": "string" },
+          "type": { "$ref": "envelope.schema.json#/definitions/journey_type" },
+          "priority": { "$ref": "envelope.schema.json#/definitions/priority" },
+          "entry_point": { "type": "string" },
+          "exit_point": { "type": "string" },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": { "type": "string", "description": "format: action -> resultat_attendu" }
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "type", "delta_steps"],
+              "properties": {
+                "id": { "type": "string" },
+                "type": { "$ref": "envelope.schema.json#/definitions/journey_type" },
+                "delta_steps": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          },
+          "manual": { "type": "boolean", "default": false },
+          "manual_reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

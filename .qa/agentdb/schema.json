@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agentdb.schema.json",
+  "title": "AgentDB — mémoire persistante inter-campagnes (stockage fichier, backend interchangeable)",
+  "description": "Implémentation par défaut : un fichier JSON par namespace dans .qa/agentdb/. Peut être remplacé par tout backend clé-valeur ou vectoriel exposé via MCP sans changer les contrats.",
+  "type": "object",
+  "properties": {
+    "browser-selectors": {
+      "description": "Fichier .qa/agentdb/browser-selectors.json — sélecteurs validés, clé logique: domain+page+label",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["domain", "page", "label", "selector_primary", "validated"],
+        "properties": {
+          "domain": { "type": "string" },
+          "page": { "type": "string" },
+          "label": { "type": "string" },
+          "selector_primary": { "type": "string" },
+          "selector_fallback": { "type": "string" },
+          "validated": { "type": "boolean" },
+          "last_validated_at": { "type": "string", "format": "date-time" },
+          "validated_by": { "enum": ["agent-1", "agent-4", "agent-6"] }
+        }
+      }
+    },
+    "browser-sessions": {
+      "description": "Fichier .qa/agentdb/browser-sessions.json — sessions authentifiées (storageState Playwright). Le storageState lui-même est dans .qa/agentdb/sessions/{role}.json (à exclure du VCS).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["session_id", "role", "storage_state_path", "created_at", "expires_at"],
+        "properties": {
+          "session_id": { "type": "string" },
+          "role": { "type": "string" },
+          "storage_state_path": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "expires_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "coverage-memory": {
+      "description": "Fichier .qa/agentdb/coverage-memory.json — scores de couverture par domaine, mis à jour par Agent 0 (lecture) et QA Analyst (clôture)",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["domain", "coverage_score"],
+        "properties": {
+          "domain": { "type": "string" },
+          "coverage_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "last_run_id": { "type": "string" },
+          "last_pass_rate_pct": { "type": "number" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "run-journal": {
+      "description": "Fichier .qa/runs/{run_id}/pipeline.log — JSONL append-only, une ligne par événement d'orchestration",
+      "type": "object",
+      "required": ["agent", "start", "status"],
+      "properties": {
+        "agent": { "type": "string" },
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" },
+        "status": { "enum": ["ok", "partial", "error", "retry", "skipped"] },
+        "deliverable_path": { "type": "string" },
+        "anomalies": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "access_matrix": {
+    "browser-selectors": { "read": ["qa-analyst", "agent-1", "agent-4", "agent-5", "agent-6"], "write": ["agent-1", "agent-4", "agent-6"] },
+    "browser-sessions": { "read": ["qa-analyst", "agent-0", "agent-1", "agent-4"], "write": ["agent-0"] },
+    "coverage-memory": { "read": ["qa-analyst", "agent-0"], "write": ["agent-0", "qa-analyst"] },
+    "run-journal": { "read": ["qa-analyst"], "write": ["qa-analyst"] }
+  }
+}

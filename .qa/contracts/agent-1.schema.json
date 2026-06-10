@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-1.schema.json",
+  "title": "Payload Agent 1 — Context Discovery (catalogue de contexte compressé)",
+  "type": "object",
+  "required": ["pages", "elements", "api_calls"],
+  "properties": {
+    "commons": {
+      "type": "object",
+      "description": "Éléments communs (nav/header/footer) déclarés une seule fois",
+      "properties": { "elements": { "$ref": "#/definitions/elementList" } }
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["url", "title", "complexity"],
+        "properties": {
+          "url": { "type": "string" },
+          "title": { "type": "string" },
+          "roles_access": { "type": "array", "items": { "type": "string" } },
+          "complexity": { "enum": ["simple", "multi-step", "conditional", "role-based"] },
+          "error_states": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["trigger", "message"],
+              "properties": {
+                "trigger": { "type": "string" },
+                "message": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "elements": { "$ref": "#/definitions/elementList" },
+    "api_calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["method", "endpoint"],
+        "properties": {
+          "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+          "endpoint": { "type": "string" },
+          "trigger": { "type": "string" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "elementList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["page", "type", "label", "selector_primary"],
+        "properties": {
+          "page": { "type": "string" },
+          "type": { "type": "string" },
+          "label": { "type": "string" },
+          "aria_role": { "type": "string" },
+          "selector_primary": { "type": "string", "minLength": 1 },
+          "selector_fallback": { "type": "string" },
+          "action": { "type": "string" }
+        }
+      }
+    }
+  }
+}

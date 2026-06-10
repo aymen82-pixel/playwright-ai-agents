@@ -1,0 +1,42 @@
+{
+  "$comment": "Configuration projet — SEUL fichier contenant des données spécifiques au projet. Copier vers .qa/qa.config.json et adapter.",
+  "base_url": "https://app.example.com",
+  "language": "fr",
+  "test_management_tool": "xray",
+  "paths": {
+    "testDir": "tests",
+    "pagesDir": "pages",
+    "fixturesDir": "fixtures",
+    "docsDir": "docs/qa",
+    "test_data": "utils/test-data.ts"
+  },
+  "run_command": "npx playwright test {path} --reporter=json",
+  "compile_command": "npx tsc --noEmit",
+  "known_routes": [],
+  "excluded_routes": ["/admin/system"],
+  "roles": [
+    {
+      "name": "default",
+      "username_env": "QA_DEFAULT_USER",
+      "password_env": "QA_DEFAULT_PASSWORD",
+      "default": true
+    }
+  ],
+  "auth": {
+    "login_url": "/login",
+    "steps": [
+      "fill role=textbox[name~=email] with $username",
+      "fill input[type=password] with $password",
+      "click role=button[name~=connect|login|sign in]",
+      "wait url!=/login"
+    ],
+    "session_ttl_hours": 24
+  },
+  "budgets": {
+    "max_retries_per_agent": 2,
+    "max_heal_attempts_per_test": 3,
+    "max_heal_passes": 1,
+    "max_session_refresh": 2,
+    "max_snapshots_per_page": 2
+  }
+}

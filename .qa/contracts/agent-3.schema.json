@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-3.schema.json",
+  "title": "Payload Agent 3 — Test Designer (index des livrables manuels)",
+  "type": "object",
+  "required": ["features"],
+  "properties": {
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "scenarios"],
+        "properties": {
+          "file": { "type": "string", "description": "chemin du .feature" },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["scenario_id", "journey_id", "tags", "automatable"],
+              "properties": {
+                "scenario_id": { "type": "string" },
+                "journey_id": { "type": "string" },
+                "tags": { "type": "array", "items": { "type": "string" } },
+                "automatable": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "csv_path": { "type": "string" },
+    "matrix_path": { "type": "string" },
+    "csv_profiles": {
+      "description": "Ordre des colonnes CSV par outil cible",
+      "type": "object",
+      "properties": {
+        "xray": { "const": ["ID", "Titre", "Préconditions", "Étapes", "Résultat attendu", "Priorité", "Tags"] },
+        "zephyr": { "const": ["Name", "Objective", "Precondition", "Test Script (Step-by-Step) - Step", "Test Script (Step-by-Step) - Expected Result", "Priority", "Labels"] },
+        "testrail": { "const": ["Title", "Preconditions", "Steps", "Expected Result", "Priority", "References"] }
+      }
+    }
+  }
+}
