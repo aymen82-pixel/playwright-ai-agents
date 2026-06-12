@@ -37,6 +37,37 @@
     "max_heal_attempts_per_test": 3,
     "max_heal_passes": 1,
     "max_session_refresh": 2,
-    "max_snapshots_per_page": 2
+    "max_snapshots_per_page": 2,
+    "a11y_max_pages": 15
+  },
+  "specialists": {
+    "a11y": false,
+    "compliance": false,
+    "perf": false
+  },
+  "compliance": {
+    "ai_features": false,
+    "personal_data": true,
+    "high_risk_ai": false
+  },
+  "perf": {
+    "max_pages": 10,
+    "budgets": {
+      "lcp_ms": 2500,
+      "cls": 0.1,
+      "ttfb_ms": 800,
+      "fcp_ms": 1800
+    },
+    "load": {
+      "allowed": false,
+      "target_env": "",
+      "script_path": "",
+      "vus": 10,
+      "duration": "1m"
+    }
+  },
+  "sdd": {
+    "input_dir": "input",
+    "output_dir": ".qa/sdd"
   }
 }

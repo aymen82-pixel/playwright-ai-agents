@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-po.schema.json",
+  "title": "Payload Agent PO — Product Owner (SDD)",
+  "type": "object",
+  "required": ["user_stories", "summary"],
+  "properties": {
+    "user_stories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "feature_id", "as_a", "i_want", "so_that", "priority", "status", "acceptance_criteria"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^US-\\d{3}$" },
+          "feature_id": { "type": "string", "pattern": "^F-\\d{3}$" },
+          "as_a": { "type": "string" },
+          "i_want": { "type": "string" },
+          "so_that": { "type": "string" },
+          "priority": { "$ref": "envelope.schema.json#/definitions/priority" },
+          "priority_note": { "type": "string" },
+          "status": { "enum": ["draft", "blocked", "approved", "rejected"] },
+          "blocked_by": { "type": "string", "pattern": "^Q-\\d{3}$" },
+          "acceptance_criteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "given", "when", "then"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^US-\\d{3}\\.AC-\\d+$" },
+                "given": { "type": "string" },
+                "when": { "type": "string" },
+                "then": { "type": "string" },
+                "rule_refs": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "if": { "properties": { "status": { "const": "blocked" } } },
+        "then": { "required": ["blocked_by"] }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "draft", "blocked", "by_priority", "checkpoint_required", "backlog_path"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 1 },
+        "draft": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 },
+        "by_priority": {
+          "type": "object",
+          "required": ["C", "E", "M", "F"],
+          "properties": {
+            "C": { "type": "integer", "minimum": 0 },
+            "E": { "type": "integer", "minimum": 0 },
+            "M": { "type": "integer", "minimum": 0 },
+            "F": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "checkpoint_required": { "const": true },
+        "backlog_path": { "type": "string" }
+      }
+    }
+  }
+}

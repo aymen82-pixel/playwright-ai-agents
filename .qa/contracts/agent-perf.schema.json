@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-perf.schema.json",
+  "title": "Payload Agent PERF — Performance Tester",
+  "type": "object",
+  "required": ["vitals", "load", "summary"],
+  "properties": {
+    "vitals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["page", "metric", "status", "samples"],
+        "properties": {
+          "page": { "type": "string" },
+          "metric": { "enum": ["LCP", "CLS", "TTFB", "FCP", "INP"] },
+          "value_ms": { "type": "number", "minimum": 0 },
+          "value": { "type": "number", "minimum": 0 },
+          "budget_ms": { "type": "number", "minimum": 0 },
+          "budget": { "type": "number", "minimum": 0 },
+          "status": { "$ref": "envelope.schema.json#/definitions/test_status" },
+          "samples": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "load": {
+      "type": "object",
+      "required": ["executed"],
+      "properties": {
+        "executed": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "tool": { "type": "string" },
+        "vus": { "type": "integer", "minimum": 1 },
+        "duration": { "type": "string" },
+        "p95_ms": { "type": "number", "minimum": 0 },
+        "error_rate_pct": { "type": "number", "minimum": 0 },
+        "thresholds_passed": { "type": "boolean" },
+        "summary_path": { "type": "string" }
+      },
+      "if": { "properties": { "executed": { "const": true } } },
+      "then": { "required": ["tool", "p95_ms", "error_rate_pct", "thresholds_passed"] },
+      "else": { "required": ["reason"] }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["pages_measured", "budgets_total", "budgets_ko", "load_executed"],
+      "properties": {
+        "pages_measured": { "type": "integer", "minimum": 0 },
+        "budgets_total": { "type": "integer", "minimum": 0 },
+        "budgets_ko": { "type": "integer", "minimum": 0 },
+        "worst_page": { "type": "string" },
+        "skipped_pages": { "type": "array", "items": { "type": "string" } },
+        "load_executed": { "type": "boolean" }
+      }
+    }
+  }
+}

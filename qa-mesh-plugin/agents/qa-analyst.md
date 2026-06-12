@@ -33,9 +33,16 @@ Agent 6 (qa-healing-coordinator)  [si échecs SCRIPT]
 ```
 
 Spécialistes parallèles [optionnels, dès la sortie de l'Agent 1] :
-`qa-a11y-auditor` (accessibilité WCAG) · `qa-compliance-checker` (RGPD / AI Act).
+`qa-a11y-auditor` (accessibilité WCAG) · `qa-compliance-checker` (RGPD / AI Act)
+· `qa-perf-tester` (Web Vitals + charge k6 gated).
 Ils ne dépendent que du catalogue de l'Agent 1 — jamais entre eux ni des
 phases 3-6 : les lancer EN PARALLÈLE du flux principal.
+
+Chaîne amont SDD [à la demande, AVANT la phase 0] :
+`qa-spec-writer` (brief → SFD structurée) → `qa-product-owner` (SFD → user
+stories + critères d'acceptation) → **checkpoint humain obligatoire** →
+alimente l'Agent 3 (Gherkin) puis le flux standard. Traçabilité :
+`F-NNN → US-NNN → TC-NNN → // @scenario`.
 
 ## Responsabilités
 
@@ -109,9 +116,9 @@ Codes courts obligatoires partout :
 
 ### Phase 2-bis — Spécialistes (optionnel, parallèle)
 - Déclenchée sur demande explicite ou si `qa.config.json#specialists`
-  active `a11y` et/ou `compliance`.
-- Lancer `qa-a11y-auditor` et/ou `qa-compliance-checker` EN PARALLÈLE des
-  phases 3 à 5 (fork de contexte : chaque spécialiste a le sien).
+  active `a11y`, `compliance` et/ou `perf`.
+- Lancer `qa-a11y-auditor`, `qa-compliance-checker` et/ou `qa-perf-tester`
+  EN PARALLÈLE des phases 3 à 5 (fork de contexte : chaque spécialiste a le sien).
 - Entrée filtrée : `pages[].{url,title}` + `storage_state_path` uniquement —
   jamais les sélecteurs ni les API.
 - Valider contre `agent-a11y.schema.json` / `agent-compliance.schema.json` ;

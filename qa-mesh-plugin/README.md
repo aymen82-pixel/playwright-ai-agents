@@ -7,9 +7,9 @@ sur **n'importe quel projet d'automatisation** sans copier de fichiers.
 
 | Composant | Détail |
 |---|---|
-| `agents/` | `qa-analyst` (orchestrateur) + agents 0–6 (couverture, découverte, parcours, conception, automatisation, exécution, healing) |
-| `commands/` | `/qa-campaign`, `/qa-coverage`, `/qa-heal` |
-| `skills/` | `playwright-best-practices`, `qa-test-data-factory`, `qa-strategy-docs`, `qa-report-generator` |
+| `agents/` | `qa-analyst` (orchestrateur) + agents 0–6 + spécialistes parallèles (`qa-a11y-auditor`, `qa-compliance-checker`, `qa-perf-tester`) + chaîne SDD amont (`qa-spec-writer`, `qa-product-owner`) |
+| `commands/` | `/qa-campaign`, `/qa-coverage`, `/qa-heal`, `/qa-sdd` |
+| `skills/` | `playwright-best-practices`, `qa-test-data-factory`, `qa-strategy-docs`, `qa-report-generator`, `qa-sdd-docs` |
 | `hooks/` | `qa-guard.js` (PreToolUse : bloque `waitForTimeout`, `networkidle`, `test.only`, URL/credentials en dur) · `qa-typecheck.js` (PostToolUse : `npm run typecheck` après toute écriture `.ts`) |
 | `.mcp.json` | serveur MCP `playwright-test` (`npx playwright run-test-mcp-server`) |
 

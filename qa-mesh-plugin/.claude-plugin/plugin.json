@@ -1,7 +1,7 @@
 {
   "name": "qa-mesh",
-  "version": "1.0.0",
-  "description": "Plateforme QA autonome multi-agents pour Playwright : 7 agents orchestrés (couverture, découverte, parcours, conception, automatisation, exécution, self-healing), skills QA, hooks d'enforcement des règles de test et serveur MCP playwright-test.",
+  "version": "1.1.0",
+  "description": "Plateforme QA autonome multi-agents pour Playwright : orchestrateur + agents 0-6, spécialistes parallèles (a11y WCAG, compliance RGPD/AI Act, performance Web Vitals/k6), chaîne SDD amont (spec writer + product owner avec checkpoint humain), skills QA, hooks d'enforcement et serveur MCP playwright-test.",
   "author": {
     "name": "aymen82-pixel"
   },

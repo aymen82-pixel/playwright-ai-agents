@@ -113,6 +113,9 @@ your-project/
 | 6 | `qa-healing-coordinator` | sonnet | Auto-réparation bornée, sélecteurs alternatifs, requalification | `healing_report.json` |
 | A11Y | `qa-a11y-auditor` | haiku | Audit accessibilité WCAG (axe-core) — **optionnel, parallèle dès l'Agent 1** | `a11y_report.json` |
 | COMP | `qa-compliance-checker` | sonnet | Indices de conformité RGPD / EU AI Act — **optionnel, parallèle dès l'Agent 1** | `compliance_report.json` |
+| PERF | `qa-perf-tester` | haiku | Web Vitals vs budgets + charge k6 (gated `perf.load.allowed`) — **optionnel, parallèle dès l'Agent 1** | `perf_report.json` |
+| SPEC | `qa-spec-writer` | sonnet | Brief/notes → SFD structurée (`F-NNN`) — **chaîne SDD amont, à la demande** | `sfd.md` + `spec_index.json` |
+| PO | `qa-product-owner` | sonnet | SFD → user stories + critères d'acceptation (`US-NNN`), **checkpoint humain avant la suite** | `user_stories.json` |
 
 ### Héritage des agents Playwright d'origine
 
