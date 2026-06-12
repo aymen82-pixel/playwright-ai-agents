@@ -1,0 +1,104 @@
+# Campagne QA nocturne — exécution shardée + healing à la demande.
+# Secrets requis : QA_DEFAULT_USER, QA_DEFAULT_PASSWORD, ANTHROPIC_API_KEY (job heal).
+# Variable requise : QA_BASE_URL (Settings → Variables).
+name: QA Nightly
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # 02h00 UTC chaque nuit
+  workflow_dispatch:
+    inputs:
+      heal:
+        description: "Lancer le healing (/qa-heal) après l'exécution"
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      BASE_URL: ${{ vars.QA_BASE_URL }}
+      QA_DEFAULT_USER: ${{ secrets.QA_DEFAULT_USER }}
+      QA_DEFAULT_PASSWORD: ${{ secrets.QA_DEFAULT_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
+      - name: Exécuter la suite (shard ${{ matrix.shard }}/2)
+        # --reporter=blob en CLI : playwright.config.ts reste intouché (règle projet)
+        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/2 --reporter=blob
+      - name: Publier le rapport blob
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 14
+
+  report:
+    needs: test
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: all-blob-reports
+          merge-multiple: true
+      - name: Fusionner les rapports
+        run: npx playwright merge-reports --reporter=html,json ./all-blob-reports
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qa-nightly-report
+          path: playwright-report/
+          retention-days: 30
+
+  # Self-healing : ne tourne que sur demande explicite (workflow_dispatch heal=true)
+  # ou automatiquement si la suite nightly a échoué. Ouvre une PR avec les
+  # sélecteurs réparés — l'humain ne voit le matin que les bugs PRODUIT.
+  heal:
+    needs: test
+    if: ${{ failure() || (github.event_name == 'workflow_dispatch' && inputs.heal) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      BASE_URL: ${{ vars.QA_BASE_URL }}
+      QA_DEFAULT_USER: ${{ secrets.QA_DEFAULT_USER }}
+      QA_DEFAULT_PASSWORD: ${{ secrets.QA_DEFAULT_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Healing borné (Agent 6) puis PR
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            /qa-heal
+            Répare uniquement les échecs SCRIPT de la dernière exécution
+            (max 3 tentatives par test, 1 passe). Ne touche ni
+            utils/test-data.ts ni playwright.config.ts. À la fin, crée une
+            branche qa-heal/{date}, committe les réparations et ouvre une PR
+            vers master avec le healing_report.json en description.
+          claude_args: "--allowedTools Bash,Read,Write,Edit,Glob,Grep"

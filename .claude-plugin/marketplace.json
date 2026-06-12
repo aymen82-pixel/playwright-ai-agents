@@ -1,0 +1,13 @@
+{
+  "name": "qa-mesh-marketplace",
+  "owner": {
+    "name": "aymen82-pixel"
+  },
+  "plugins": [
+    {
+      "name": "qa-mesh",
+      "source": "./qa-mesh-plugin",
+      "description": "Plateforme QA autonome multi-agents Playwright : agents 0-6 + orchestrateur, skills QA, hooks d'enforcement, MCP playwright-test."
+    }
+  ]
+}

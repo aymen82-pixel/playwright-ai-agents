@@ -111,6 +111,8 @@ your-project/
 | 4 | `qa-automation-engineer` | sonnet | Gherkin/parcours → Playwright TS, POM, fixtures, validation MCP | `pages/*`, `tests/*`, `fixtures/*` |
 | 5 | `qa-test-executor` | haiku | Exécution, classification PRODUIT/SCRIPT/ENV | `execution_report.json`, `bugs_report.json` |
 | 6 | `qa-healing-coordinator` | sonnet | Auto-réparation bornée, sélecteurs alternatifs, requalification | `healing_report.json` |
+| A11Y | `qa-a11y-auditor` | haiku | Audit accessibilité WCAG (axe-core) — **optionnel, parallèle dès l'Agent 1** | `a11y_report.json` |
+| COMP | `qa-compliance-checker` | sonnet | Indices de conformité RGPD / EU AI Act — **optionnel, parallèle dès l'Agent 1** | `compliance_report.json` |
 
 ### Héritage des agents Playwright d'origine
 

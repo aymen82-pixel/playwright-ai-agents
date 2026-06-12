@@ -7,7 +7,9 @@ Playwright, exécution et auto-réparation.
 ## Structure du projet
 
 ```
-.claude/            # agents (qa-analyst + 0–6), skills, commands, rules, settings.json
+.claude/            # agents (qa-analyst + 0–6 + spécialistes a11y/compliance), skills, commands, rules, hooks, settings.json
+.claude-plugin/     # marketplace.json — ce repo est installable comme plugin
+qa-mesh-plugin/     # plugin distribuable : agents + skills + hooks + MCP (voir son README)
 .qa/                # config projet, contrats JSON inter-agents, AgentDB (mémoire persistante)
 tests/              # specs Playwright organisés PAR FEATURE : tests/<feature>/<feature>.<flux>.spec.ts
 pages/              # Page Object Model : une classe par page (<nom>.page.ts), composants dans pages/components/
@@ -23,7 +25,10 @@ ARCHITECTURE.md     # architecture détaillée des agents, diagramme, stratégie
 - TypeScript exclusivement. Compilation `npm run typecheck` obligatoire avant livraison.
 - Jamais d'URL en dur (utiliser `baseURL`), jamais de credentials en dur
   (utiliser `utils/test-data.ts` + variables d'environnement).
-- Jamais `waitForTimeout` ni `networkidle`.
+- Jamais `waitForTimeout` ni `networkidle`. Ces interdits (+ `test.only`,
+  URL/credentials en dur) sont appliqués automatiquement par les hooks
+  `.claude/hooks/qa-guard.js` (blocage à l'écriture) et `qa-typecheck.js`
+  (compilation TS après chaque écriture).
 - Ne pas modifier `utils/test-data.ts` ni `playwright.config.ts` sans demande explicite.
 - Toute donnée spécifique au projet testé vit dans `.qa/qa.config.json` — aucun
   agent ne contient de règle métier.

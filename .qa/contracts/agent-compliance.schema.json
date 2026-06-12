@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-compliance.schema.json",
+  "title": "Payload Agent COMPLIANCE — RGPD / EU AI Act Checker",
+  "type": "object",
+  "required": ["checks", "summary"],
+  "properties": {
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "regulation", "requirement", "status", "severity"],
+        "properties": {
+          "id": { "type": "string" },
+          "regulation": { "enum": ["RGPD", "AIACT"] },
+          "requirement": { "type": "string" },
+          "status": { "$ref": "envelope.schema.json#/definitions/test_status" },
+          "severity": { "$ref": "envelope.schema.json#/definitions/priority" },
+          "evidence_path": { "type": "string" },
+          "observed": { "type": "string" },
+          "recommendation": { "type": "string" }
+        },
+        "if": { "properties": { "status": { "const": "KO" } } },
+        "then": { "required": ["evidence_path", "recommendation"] }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "ok", "ko", "ins", "ign", "disclaimer"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "ok": { "type": "integer", "minimum": 0 },
+        "ko": { "type": "integer", "minimum": 0 },
+        "ins": { "type": "integer", "minimum": 0 },
+        "ign": { "type": "integer", "minimum": 0 },
+        "disclaimer": { "type": "string", "minLength": 10 }
+      }
+    }
+  }
+}

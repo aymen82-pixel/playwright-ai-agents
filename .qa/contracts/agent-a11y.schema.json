@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa-mesh/agent-a11y.schema.json",
+  "title": "Payload Agent A11Y — Accessibility Auditor",
+  "type": "object",
+  "required": ["violations", "summary"],
+  "properties": {
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "page", "rule", "impact", "severity", "nodes_count"],
+        "properties": {
+          "id": { "type": "string" },
+          "page": { "type": "string" },
+          "rule": { "type": "string" },
+          "impact": { "enum": ["critical", "serious", "moderate", "minor"] },
+          "severity": { "$ref": "envelope.schema.json#/definitions/priority" },
+          "wcag": { "type": "string" },
+          "nodes_count": { "type": "integer", "minimum": 1 },
+          "selector_sample": { "type": "string" },
+          "suggested_fix": { "type": "string" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["pages_scanned", "violations_total", "method", "by_impact"],
+      "properties": {
+        "pages_scanned": { "type": "integer", "minimum": 0 },
+        "violations_total": { "type": "integer", "minimum": 0 },
+        "method": { "enum": ["axe-core", "heuristic"] },
+        "skipped_pages": { "type": "array", "items": { "type": "string" } },
+        "by_impact": {
+          "type": "object",
+          "required": ["critical", "serious", "moderate", "minor"],
+          "properties": {
+            "critical": { "type": "integer", "minimum": 0 },
+            "serious": { "type": "integer", "minimum": 0 },
+            "moderate": { "type": "integer", "minimum": 0 },
+            "minor": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}

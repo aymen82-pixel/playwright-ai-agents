@@ -1,0 +1,9 @@
+{
+  "name": "qa-mesh",
+  "version": "1.0.0",
+  "description": "Plateforme QA autonome multi-agents pour Playwright : 7 agents orchestrés (couverture, découverte, parcours, conception, automatisation, exécution, self-healing), skills QA, hooks d'enforcement des règles de test et serveur MCP playwright-test.",
+  "author": {
+    "name": "aymen82-pixel"
+  },
+  "keywords": ["qa", "playwright", "testing", "multi-agents", "self-healing"]
+}
