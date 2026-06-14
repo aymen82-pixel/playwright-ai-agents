@@ -36,10 +36,13 @@ Usage :
       put [--domain --page --label --primary [--fallback] [--validated]
            [--validated-by] [--run-id]] | (JSON objet/tableau sur stdin)
       get [--domain] [--page] [--label] [--validated-only] [--json]
-      pack --domain <d> [--for <agent>] [--all]   (JSON pour injection prompt)
+      pack --domain <d> [--for <agent>] [--all] [--fresh <30d>]  (trusted = validé+frais)
       similar --domain <d> --page <p> --label <l> [--top <n>]  (healing)
       prune --stale <30d|24h|…> [--dry-run]
       export [--out <fichier>]
+      record-results --run <run_id> [--domain <d>]   (stdin = rapport Agent 5)
+      passed-scenarios [--domain <d>]   (scénarios verts de la campagne précédente)
+      journal --run <run_id>   (événements d'orchestration depuis SQLite)
       session-put|session-get --role <r> [--storage-state --expires --session-id]
       coverage-put|coverage-get --domain <d> [--score --last-run --pass-rate --routes-hash]
 
@@ -65,6 +68,7 @@ function parse(argv: string[]): ParsedArgs {
     "domain", "page", "label", "primary", "fallback", "validated-by", "run-id",
     "for", "top", "stale", "out", "role", "storage-state", "expires",
     "session-id", "score", "last-run", "pass-rate", "routes-hash",
+    "run", "fresh",
   ]);
 
   for (let i = 0; i < argv.length; i++) {

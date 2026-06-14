@@ -104,7 +104,8 @@ principe central de qa-mesh/2.0 : 0 token et 0 non-déterminisme sur ces tâches
 - Commandes disponibles : `validate`, `journal`, `filter` (transmission
   sélective via `.qa/routing.yaml`), `db <sous-commande>` (AgentDB v2 SQLite :
   `init`, `migrate`, `put`, `get`, `pack`, `similar`, `prune`, `export`,
-  `session-*`, `coverage-*`). `--help` pour l'usage.
+  `record-results`, `passed-scenarios`, `journal`, `session-*`, `coverage-*`),
+  `manifest build`, `compile`. `--help` pour l'usage.
 - Toujours préférer `--json` pour parser la sortie de façon fiable.
 
 ## Workflow détaillé
@@ -152,7 +153,11 @@ principe central de qa-mesh/2.0 : 0 token et 0 non-déterminisme sur ces tâches
 - Valider : syntaxe Gherkin parsable, tags présents, ≤ 7 étapes par scénario.
 
 ### Phase 4 — Automatisation (Agent 4)
-- Obtenir le pack de sélecteurs du domaine via le kernel (responsabilité n°3).
+- Obtenir le pack de sélecteurs du domaine via le kernel (responsabilité n°3),
+  avec fraîcheur : `db pack --domain <d> --for agent-4 --fresh 30d` (chaque
+  sélecteur porte `trusted`). Injecter aussi `db passed-scenarios --domain <d>`
+  pour la **validation MCP différentielle** : l'Agent 4 n'écrit en direct (sans
+  rejeu live) que les étapes aux sélecteurs `trusted` d'un scénario déjà vert.
 - Entrée : scénarios automatisables (index `{ scenario_id, steps[], tags[] }`)
   + index sélecteurs. JAMAIS le catalogue complet.
 - Valider : `npx tsc --noEmit` (ou équivalent projet) sans erreur ;
@@ -160,7 +165,11 @@ principe central de qa-mesh/2.0 : 0 token et 0 non-déterminisme sur ces tâches
 
 ### Phase 5 — Exécution (Agent 5)
 - Entrée : chemin des specs du domaine + commande d'exécution depuis la config.
+  Exécution shardée par feature (`--workers`, `--shard i/n` en CI).
 - Valider : `results[]` couvre 100 % des tests lancés ; chaque KO est classifié.
+- Après validation, persister la mémoire d'exécution :
+  `db record-results --run <run_id> --domain <d>` (rapport Agent 5 sur stdin) —
+  alimente la validation différentielle (Phase 4) des campagnes suivantes.
 
 ### Phase 6 — Réparation (Agent 6, conditionnel)
 - Déclenché uniquement si ≥ 1 échec SCRIPT.

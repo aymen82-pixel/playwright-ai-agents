@@ -67,9 +67,36 @@ export function runDb(opts: DbOptions): DbOutcome {
       case "pack": {
         const domain = flag("domain");
         if (!domain) return fail(json, "pack : --domain requis");
-        const pack = db.pack(domain, !opts.bools.has("all"));
+        // --fresh <durée> : fenêtre de fraîcheur pour le flag `trusted` (défaut 30d).
+        const freshCutoff = staleCutoff(flag("fresh") ?? "30d", opts.nowMs ?? Date.now());
+        const pack = db.pack(domain, !opts.bools.has("all"), freshCutoff);
         // pack est toujours du JSON (destiné à l'injection en prompt).
         return { exitCode: 0, stdout: JSON.stringify(pack) };
+      }
+
+      case "record-results": {
+        const runId = flag("run");
+        if (!runId) return fail(json, "record-results : --run <run_id> requis");
+        const raw = readFileSync(0, "utf8").trim();
+        if (!raw) return fail(json, "record-results : JSON attendu sur stdin (payload Agent 5 ou results[])");
+        const parsed = JSON.parse(raw);
+        const results = Array.isArray(parsed) ? parsed : parsed?.payload?.results ?? parsed?.results;
+        if (!Array.isArray(results)) return fail(json, "record-results : `results[]` introuvable dans l'entrée");
+        const domain = flag("domain") ?? parsed?.domain ?? null;
+        const count = db.recordResults(runId, domain, results);
+        return ok(json, { recorded: count }, `OK ${count} résultat(s) enregistré(s)`);
+      }
+
+      case "passed-scenarios": {
+        const passed = db.passedScenarios(flag("domain"));
+        return ok(json, passed, `${passed.length} scénario(s) verts à la campagne précédente`, passed);
+      }
+
+      case "journal": {
+        const runId = flag("run");
+        if (!runId) return fail(json, "journal : --run <run_id> requis");
+        const rows = db.queryJournal(runId);
+        return ok(json, rows, `${rows.length} événement(s) pour ${runId}`, rows);
       }
 
       case "similar": {

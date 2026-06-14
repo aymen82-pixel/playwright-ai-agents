@@ -54,6 +54,19 @@ CREATE TABLE IF NOT EXISTS journal (
 );
 CREATE INDEX IF NOT EXISTS idx_journal_run ON journal(run_id);
 
+CREATE TABLE IF NOT EXISTS scenario_runs (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id      TEXT NOT NULL,
+  scenario_id TEXT,
+  spec        TEXT,
+  title       TEXT,
+  domain      TEXT,
+  status      TEXT NOT NULL,
+  ts          TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_scenario_runs_run ON scenario_runs(run_id);
+CREATE INDEX IF NOT EXISTS idx_scenario_runs_spec ON scenario_runs(spec, title);
+
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 `;
 
@@ -103,6 +116,31 @@ export interface SelectorFilter {
   page?: string;
   label?: string;
   validatedOnly?: boolean;
+}
+
+export interface PackSelector {
+  label: string;
+  selector_primary: string;
+  selector_fallback: string | null;
+  validated: boolean;
+  /** Validation MCP différentielle (étape 5) : validé ET frais → skip live. */
+  trusted: boolean;
+}
+
+export interface JournalEntry {
+  run_id: string;
+  agent: string;
+  ts: string;
+  status: string;
+  deliverable_path?: string | null;
+  anomalies?: string[] | null;
+}
+
+export interface ScenarioResult {
+  scenario_id?: string | null;
+  spec?: string | null;
+  title?: string | null;
+  status: string;
 }
 
 type Clock = () => string;
@@ -235,20 +273,27 @@ export class AgentDb {
 
   /**
    * Pack domaine pour injection en prompt (Agent 4) : sélecteurs validés
-   * courants, groupés et triés par page.
+   * courants, groupés et triés par page. Chaque sélecteur porte un flag
+   * `trusted` (validation MCP différentielle, étape 5) = validé ET frais
+   * (`last_validated_at >= freshCutoffIso`). Si `freshCutoffIso` est omis,
+   * `trusted` vaut `validated`.
    */
-  pack(domain: string, validatedOnly = true): {
+  pack(domain: string, validatedOnly = true, freshCutoffIso?: string): {
     domain: string;
-    pages: Record<string, Array<Pick<SelectorRow, "label" | "selector_primary" | "selector_fallback" | "validated">>>;
+    pages: Record<string, PackSelector[]>;
   } {
     const rows = this.getSelectors({ domain, validatedOnly });
-    const pages: Record<string, Array<Pick<SelectorRow, "label" | "selector_primary" | "selector_fallback" | "validated">>> = {};
+    const pages: Record<string, PackSelector[]> = {};
     for (const r of rows) {
+      const fresh = freshCutoffIso
+        ? r.last_validated_at != null && r.last_validated_at >= freshCutoffIso
+        : true;
       (pages[r.page] ??= []).push({
         label: r.label,
         selector_primary: r.selector_primary,
         selector_fallback: r.selector_fallback,
         validated: r.validated,
+        trusted: r.validated && fresh,
       });
     }
     return { domain, pages };
@@ -351,6 +396,78 @@ export class AgentDb {
       .prepare("SELECT * FROM coverage WHERE domain = ?")
       .get(domain) as Record<string, unknown> | undefined;
     return row ?? null;
+  }
+
+  // ---- journal (SQLite, étape 6 — requêtable pour le dashboard) ------------
+
+  appendJournal(entry: JournalEntry): void {
+    this.db
+      .prepare(
+        `INSERT INTO journal (run_id, agent, ts, status, deliverable_path, anomalies)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.run_id,
+        entry.agent,
+        entry.ts,
+        entry.status,
+        entry.deliverable_path ?? null,
+        entry.anomalies && entry.anomalies.length ? JSON.stringify(entry.anomalies) : null,
+      );
+  }
+
+  queryJournal(runId: string): Record<string, unknown>[] {
+    return this.db
+      .prepare("SELECT * FROM journal WHERE run_id = ? ORDER BY id")
+      .all(runId) as Record<string, unknown>[];
+  }
+
+  // ---- mémoire d'exécution (étape 5/6 — validation MCP différentielle) -----
+
+  /** Enregistre les résultats d'une campagne (depuis le rapport Agent 5). */
+  recordResults(runId: string, domain: string | null, results: ScenarioResult[]): number {
+    const ts = this.now();
+    let count = 0;
+    this.db.exec("BEGIN");
+    try {
+      const stmt = this.db.prepare(
+        `INSERT INTO scenario_runs (run_id, scenario_id, spec, title, domain, status, ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      );
+      for (const r of results) {
+        stmt.run(runId, r.scenario_id ?? null, r.spec ?? null, r.title ?? null, domain, r.status, ts);
+        count++;
+      }
+      this.db.exec("COMMIT");
+    } catch (e) {
+      this.db.exec("ROLLBACK");
+      throw e;
+    }
+    return count;
+  }
+
+  /**
+   * Scénarios passés au vert lors de la campagne précédente (la plus récente).
+   * Sert à l'Agent 4 : un test déjà vert + sélecteurs `trusted` → pas de rejeu live.
+   */
+  passedScenarios(domain?: string): Array<{ spec: string | null; title: string | null; scenario_id: string | null }> {
+    const latest = this.db
+      .prepare(
+        `SELECT run_id FROM scenario_runs
+         ${domain ? "WHERE domain = ?" : ""}
+         ORDER BY ts DESC, id DESC LIMIT 1`,
+      )
+      .get(...(domain ? [domain] : [])) as { run_id?: string } | undefined;
+    if (!latest?.run_id) return [];
+
+    const params: string[] = [latest.run_id];
+    if (domain) params.push(domain);
+    return this.db
+      .prepare(
+        `SELECT spec, title, scenario_id FROM scenario_runs
+         WHERE run_id = ? AND status = 'OK' ${domain ? "AND domain = ?" : ""}`,
+      )
+      .all(...params) as Array<{ spec: string | null; title: string | null; scenario_id: string | null }>;
   }
 
   // ---- export / import -----------------------------------------------------

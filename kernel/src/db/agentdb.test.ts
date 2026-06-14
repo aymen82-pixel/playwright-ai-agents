@@ -89,6 +89,54 @@ test("coverage : upsert par domaine", () => {
   db.close();
 });
 
+test("journal SQLite : append + query par run", () => {
+  const db = AgentDb.open(":memory:", fixedClock());
+  db.appendJournal({ run_id: "2026-06-14-001", agent: "agent-0", ts: "2026-06-14T10:00:00Z", status: "ok" });
+  db.appendJournal({ run_id: "2026-06-14-001", agent: "agent-1", ts: "2026-06-14T10:05:00Z", status: "retry", anomalies: ["x"] });
+  db.appendJournal({ run_id: "2026-06-14-002", agent: "agent-0", ts: "2026-06-14T11:00:00Z", status: "ok" });
+  const rows = db.queryJournal("2026-06-14-001");
+  assert.equal(rows.length, 2);
+  assert.equal(rows[1].agent, "agent-1");
+  assert.equal(rows[1].anomalies, JSON.stringify(["x"]));
+  db.close();
+});
+
+test("mémoire d'exécution : recordResults + passedScenarios (campagne précédente)", () => {
+  const db = AgentDb.open(":memory:", () => "2026-06-13T10:00:00Z");
+  db.recordResults("2026-06-13-001", "checkout", [
+    { spec: "checkout/pay.spec.ts", title: "paiement ok", status: "OK" },
+    { spec: "checkout/pay.spec.ts", title: "paiement refusé", status: "KO" },
+  ]);
+  const passed = db.passedScenarios("checkout");
+  assert.equal(passed.length, 1);
+  assert.equal(passed[0].title, "paiement ok");
+  db.close();
+});
+
+test("passedScenarios ne retient que la campagne la plus récente", () => {
+  const db = AgentDb.open(":memory:", () => "2026-06-10T10:00:00Z");
+  db.recordResults("run-old", "auth", [{ spec: "auth/login.spec.ts", title: "login ok", status: "OK" }]);
+  db.recordResults("run-new", "auth", [{ spec: "auth/login.spec.ts", title: "login ok", status: "KO" }]);
+  // ts identiques -> départage par id DESC : run-new (KO) prime.
+  const passed = db.passedScenarios("auth");
+  assert.equal(passed.length, 0, "la campagne la plus récente (KO) prime");
+  db.close();
+});
+
+test("pack annote trusted = validé ET frais", () => {
+  let clock = "2026-06-14T10:00:00Z";
+  const db = AgentDb.open(":memory:", () => clock);
+  db.putSelector({ domain: "auth", page: "/login", label: "old", selector_primary: "#o", validated: true });
+  clock = "2026-06-14T12:00:00Z";
+  db.putSelector({ domain: "auth", page: "/login", label: "fresh", selector_primary: "#f", validated: true });
+  const cutoff = "2026-06-14T11:00:00Z"; // entre les deux
+  const pack = db.pack("auth", true, cutoff);
+  const byLabel = Object.fromEntries(pack.pages["/login"].map((s) => [s.label, s]));
+  assert.equal(byLabel["fresh"].trusted, true);
+  assert.equal(byLabel["old"].trusted, false, "validé mais périmé -> non trusted");
+  db.close();
+});
+
 test("export produit un dump JSON des trois namespaces", () => {
   const db = AgentDb.open(":memory:", fixedClock());
   db.putSelector({ domain: "auth", page: "/login", label: "email", selector_primary: "#e", validated: true });

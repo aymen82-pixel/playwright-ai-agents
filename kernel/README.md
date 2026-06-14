@@ -102,8 +102,13 @@ echo '[{"domain":"auth","page":"/login","label":"email","selector_primary":"#ema
 node kernel/dist/cli.js db get --domain auth --validated-only --json
 node kernel/dist/cli.js db pack --domain auth --for agent-4   # JSON groupé par page
 node kernel/dist/cli.js db similar --domain auth --page /login --label emailFld --top 3
+node kernel/dist/cli.js db pack --domain auth --for agent-4 --fresh 30d  # ajoute `trusted` par sélecteur
 node kernel/dist/cli.js db prune --stale 30d [--dry-run]
 node kernel/dist/cli.js db export --out .qa/agentdb/agentdb.export.json
+# Validation MCP différentielle (étape 5) + dashboard (étape 6)
+cat execution_report.json | node kernel/dist/cli.js db record-results --run <run_id> --domain auth
+node kernel/dist/cli.js db passed-scenarios --domain auth --json   # scénarios verts campagne précédente
+node kernel/dist/cli.js db journal --run <run_id> --json           # journal SQLite (le `journal` y écrit aussi)
 node kernel/dist/cli.js db session-put --role admin --storage-state <p> --expires <iso>
 node kernel/dist/cli.js db coverage-put --domain auth --score 0.85 --routes-hash <h>
 ```
@@ -168,4 +173,10 @@ Le kernel est ainsi invocable depuis n'importe quel emplacement du projet.
 - [x] **Étape 4** — `agents/manifest.yaml` + `agents/bodies/` (source unique) ;
       `qa-mesh manifest build` + `compile --target claude|opencode|codex|copilot|gemini`.
       Byte-identique Claude prouvé (test de non-régression sur 13 agents).
-- [ ] Étapes 5-8 — validation MCP différentielle, sharding, contrats `qa-mesh/2.0`, nettoyage.
+- [x] **Étape 5** — validation MCP différentielle : `pack --fresh` annote `trusted`
+      (validé+frais) ; `db record-results` + `db passed-scenarios` (mémoire d'exécution) ;
+      Agent 4 n'écrit en direct que les étapes `trusted` d'un scénario déjà vert.
+- [x] **Étape 6** — journal dual-write SQLite (`db journal --run`) pour le dashboard ;
+      sharding Agent 5 par feature (`--workers`/`--shard`).
+- [ ] Étapes 7-8 — contrats `qa-mesh/2.0` (schema_version), nettoyage doctrines dupliquées.
+- [ ] Étape 9 — Coverage Intelligence (voir COVERAGE-INTELLIGENCE.md).

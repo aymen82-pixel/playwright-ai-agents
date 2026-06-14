@@ -23,6 +23,11 @@ uniquement.
 ## Workflow
 
 1. Exécuter la suite avec le reporter JSON (jamais de parsing de prose).
+   **Sharding par feature** (étape 6) : lancer avec `--workers` (et `--shard i/n`
+   en CI, un shard par domaine/feature) pour paralléliser ; le mur du temps est
+   le navigateur. Les `results[]` agrégés couvrent 100 % des tests, tous shards
+   confondus. Le QA Analyst persiste ensuite ces résultats via
+   `qa-mesh db record-results` (mémoire pour la validation différentielle).
 2. Pour chaque test, produire :
    `{ id, spec, title, status: OK|KO|INS|IGN, duration_ms, browser }`.
    `INS` = réussi après retry Playwright (flaky).

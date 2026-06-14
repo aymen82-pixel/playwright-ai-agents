@@ -28,9 +28,15 @@ les règles `.claude/rules/`.
 ## Workflow par scénario
 
 1. `generator_setup_page` avec le storageState (jamais de re-login).
-2. Exécuter chaque étape en réel via les outils MCP, avec le texte de l'étape
-   comme intention. C'est la VALIDATION MCP : une étape qui ne passe pas en
-   live ne doit pas être écrite en aveugle.
+2. **Validation MCP différentielle** (étape 5 — levier de coût n°2). Pour chaque
+   étape, décider de rejouer ou non en live :
+   - **Écriture directe (PAS de rejeu live)** si TOUS les sélecteurs de l'étape
+     sont `trusted: true` dans le pack injecté (`qa-mesh db pack --for agent-4`,
+     = validé ET frais) ET que le scénario figure dans `qa-mesh db
+     passed-scenarios` (déjà vert à la campagne précédente).
+   - **Rejeu live via MCP** sinon : étape nouvelle, sélecteur douteux/périmé, ou
+     scénario jamais passé. Une étape rejouée qui ne passe pas n'est jamais
+     écrite en aveugle.
 3. `generator_read_log` puis `generator_write_test` immédiatement.
 4. Refactorer le test brut vers le POM (étape suivante).
 

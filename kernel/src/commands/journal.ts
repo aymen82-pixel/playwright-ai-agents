@@ -3,6 +3,7 @@ import { join } from "node:path";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import { findQaDir, runDir } from "../paths";
+import { AgentDb } from "../db/agentdb";
 
 export interface JournalOptions {
   runId: string;
@@ -60,6 +61,27 @@ export function runJournal(opts: JournalOptions): JournalOutcome {
   mkdirSync(dir, { recursive: true });
   const logPath = join(dir, "pipeline.log");
   appendFileSync(logPath, JSON.stringify(entry) + "\n", "utf8");
+
+  // Dual-write SQLite (étape 6) — requêtable pour le dashboard ; JSONL conservé
+  // pour la portabilité. Best-effort : ne jamais casser le pipeline si la base
+  // est indisponible (le JSONL reste la source de vérité d'orchestration).
+  try {
+    const db = AgentDb.open(join(qaDir, "agentdb", "agentdb.sqlite"), opts.now);
+    try {
+      db.appendJournal({
+        run_id: opts.runId,
+        agent: opts.agent,
+        ts: String(entry.start),
+        status: opts.status,
+        deliverable_path: opts.deliverable,
+        anomalies: opts.anomalies,
+      });
+    } finally {
+      db.close();
+    }
+  } catch {
+    /* JSONL déjà écrit — on n'échoue pas l'orchestration pour le miroir SQLite. */
+  }
 
   const stdout = opts.json
     ? JSON.stringify({ written: true, path: logPath, entry })
