@@ -51,9 +51,11 @@ alimente l'Agent 3 (Gherkin) puis le flux standard. Traçabilité :
    la sortie de l'Agent 1 (il consomme `pages`/`elements`). Agent 3 n'est lancé
    que si l'utilisateur demande des livrables manuels (Gherkin/CSV) — sinon
    l'index de scénarios de l'Agent 2 alimente directement l'Agent 4.
-2. **Gestion du contexte** : tu es l'unique détenteur des livrables complets.
-   Tu transmets à chaque agent UNIQUEMENT les champs dont il a besoin (voir
-   "Transmission sélective"). Jamais un livrable entier si une partie suffit.
+2. **Gestion du contexte** : tu es l'unique détenteur des livrables complets,
+   mais la transmission sélective est DÉLÉGUÉE au kernel —
+   `node kernel/dist/cli.js filter --from <a> --to <b> <livrable>` projette les
+   champs déclarés dans `.qa/routing.yaml` (source unique). Injecte l'extrait tel
+   quel dans le prompt de l'agent cible ; ne curate jamais les champs toi-même.
 3. **Résolution des sélecteurs** : avant de lancer l'Agent 4, demander au kernel
    le pack du domaine — `node kernel/dist/cli.js db pack --domain <d> --for
    agent-4` — et l'injecter tel quel dans le prompt de l'Agent 4. Le kernel
@@ -106,9 +108,10 @@ principe central de qa-mesh/2.0 : 0 token et 0 non-déterminisme sur ces tâches
 - Invocation depuis la racine du projet : `node kernel/dist/cli.js <commande>`.
 - Build unique (idempotent) : si `kernel/dist/cli.js` est absent, lancer
   `npm --prefix kernel ci && npm --prefix kernel run build` une seule fois.
-- Commandes disponibles : `validate`, `journal`, `db <sous-commande>`
-  (AgentDB v2 SQLite : `init`, `migrate`, `put`, `get`, `pack`, `similar`,
-  `prune`, `export`, `session-*`, `coverage-*`). `--help` pour l'usage.
+- Commandes disponibles : `validate`, `journal`, `filter` (transmission
+  sélective via `.qa/routing.yaml`), `db <sous-commande>` (AgentDB v2 SQLite :
+  `init`, `migrate`, `put`, `get`, `pack`, `similar`, `prune`, `export`,
+  `session-*`, `coverage-*`). `--help` pour l'usage.
 - Toujours préférer `--json` pour parser la sortie de façon fiable.
 
 ## Workflow détaillé
@@ -208,8 +211,8 @@ Les leviers ci-dessous optimisent le travail LLM résiduel.
 
 1. **Modèles différenciés** : agents 0, 1, 2, 5 → modèle économique (haiku) ;
    agents 3, 4, 6 et toi-même → modèle précis (sonnet).
-2. **Transmission sélective** (voir phases) — règle d'or : un agent ne reçoit
-   que ce qu'il consomme.
+2. **Transmission sélective** déléguée au kernel (`filter` + `.qa/routing.yaml`,
+   source unique) — règle d'or : un agent ne reçoit que ce qu'il consomme.
 3. **Compression des entrées** : jamais de DOM brut. Snapshots d'accessibilité
    ou Markdown structuré. Les blocs répétés (nav/header/footer) sont déclarés
    une seule fois dans `payload.commons`.

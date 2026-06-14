@@ -39,6 +39,54 @@ est déduit du champ `agent` de l'enveloppe ou forcé via `--agent`.
 - Exit `0` : conforme. Exit `1` : non conforme (erreurs listées).
 - `--json` : sortie machine `{ valid, agent, errors[{layer,path,message}] }`.
 
+### `manifest` / `compile` — source unique multi-runtimes
+
+Les définitions d'agents vivent dans **une seule source** :
+`agents/manifest.yaml` (métadonnées) + `agents/bodies/<name>.md` (corps prose
+verbatim). `compile` régénère les définitions pour chaque runtime — fin du drift
+des 5 copies maintenues à la main.
+
+```bash
+# Migration : .claude/agents/*.md -> agents/manifest.yaml + agents/bodies/
+node kernel/dist/cli.js manifest build
+
+# Compilation vers un runtime
+node kernel/dist/cli.js compile --target claude            # écrit .claude/agents/*.md + .mcp.json
+node kernel/dist/cli.js compile --target claude --check    # non-régression byte-identique (exit 1 si diff)
+node kernel/dist/cli.js compile --target opencode          # .opencode/agent/*.md + opencode.json
+node kernel/dist/cli.js compile --target gemini --dry-run  # liste les fichiers sans écrire
+```
+
+- Cibles : `claude` · `opencode` · `codex` · `copilot` · `gemini`.
+- **Garantie clé** : `compile --target claude` reproduit **byte-identique** les
+  `.claude/agents/*.md` (frontmatter ordre fixe + corps verbatim, eol LF/CRLF
+  préservé par fichier). Prouvé par test de non-régression sur les 13 agents.
+- Chaque cible émet aussi la déclaration du serveur MCP `playwright-test`
+  (`.mcp.json`, `opencode.json`, `.codex/config.toml`, `.vscode/mcp.json`,
+  `.gemini/settings.json`) — un seul serveur, fin du drift (§7).
+- `codex`/`copilot`/`gemini` n'ayant pas de sous-agents fichiers dédiés, leurs
+  définitions sont compilées en un bundle d'instructions unique (AGENTS.md /
+  copilot-instructions.md / GEMINI.md).
+
+### `filter` — transmission sélective déclarative
+
+Projette le payload d'un livrable selon l'arête `from->to` de `.qa/routing.yaml`
+(source unique, remplace la table prose d'ARCHITECTURE.md §2). Sort l'extrait
+JSON destiné à l'injection dans le prompt de l'agent cible.
+
+```bash
+node kernel/dist/cli.js filter --from 1 --to 2 .qa/runs/<run>/context_catalog.json
+# ou via stdin, et avec les identifiants complets :
+cat deliverable.json | node kernel/dist/cli.js filter --from agent-5 --to agent-6 -
+```
+
+- `--from`/`--to` acceptent `1` ou `agent-1`.
+- Grammaire des champs dans `routing.yaml` (cf. `src/routing/project.ts`) :
+  `domain` · `session.{a,b}` · `pages[].{url,title}` · `api_calls` ·
+  `results[?failure.kind==SCRIPT].{id,spec}` (filtre + projection).
+- Les **sélecteurs ne transitent jamais** par `filter` : ils viennent de `db pack`.
+- Arête absente de `routing.yaml` → code de sortie `2` + liste des arêtes connues.
+
 ### `db` — AgentDB v2 (SQLite, WAL)
 
 Mémoire persistante inter-campagnes. Fichier `.qa/agentdb/agentdb.sqlite`
@@ -97,6 +145,13 @@ Le kernel est ainsi invocable depuis n'importe quel emplacement du projet.
 | `src/contracts.ts` | `ContractRegistry` — charge et compile tous les contrats avec Ajv |
 | `src/commands/validate.ts` | Commande `validate` |
 | `src/commands/journal.ts` | Commande `journal` |
+| `src/commands/filter.ts` | Commande `filter` (transmission sélective) |
+| `src/routing/project.ts` | Moteur de projection (parse + applique les chemins) |
+| `src/routing/yaml.ts` | Parseur YAML minimal (`routing.yaml` + `manifest.yaml`) |
+| `src/commands/manifest.ts` | Commande `manifest build` (migration vers la source unique) |
+| `src/commands/compile.ts` | Commande `compile` (génération multi-runtimes + `--check`) |
+| `src/manifest/manifest.ts` | Parse/recompile byte-identique + (dé)sérialisation manifeste |
+| `src/manifest/targets.ts` | Émetteurs par runtime (agents + config MCP) |
 | `src/commands/db.ts` | Dispatch des sous-commandes `db` |
 | `src/db/agentdb.ts` | `AgentDb` — wrapper SQLite (`node:sqlite`, WAL) |
 | `src/db/migrate.ts` | Migration JSON→SQLite + parseur de durée `--stale` |
@@ -108,6 +163,9 @@ Le kernel est ainsi invocable depuis n'importe quel emplacement du projet.
 - [x] **Étape 1** — `validate` (Ajv) + `journal`, branchés sur le QA Analyst.
 - [x] **Étape 2** — AgentDB SQLite (`db init/migrate/put/get/pack/similar/prune/export`,
       sessions + couverture) ; agents 0/1/4/5/6 + analyst recâblés sur le CLI.
-- [ ] Étape 3 — `routing.yaml` déclaratif + `filter`.
-- [ ] Étape 4 — manifeste + `compile --target claude|opencode|codex|copilot|gemini`.
+- [x] **Étape 3** — `.qa/routing.yaml` déclaratif + `qa-mesh filter` ; transmission
+      sélective retirée du prompt qa-analyst (resp. #2 déléguée au kernel).
+- [x] **Étape 4** — `agents/manifest.yaml` + `agents/bodies/` (source unique) ;
+      `qa-mesh manifest build` + `compile --target claude|opencode|codex|copilot|gemini`.
+      Byte-identique Claude prouvé (test de non-régression sur 13 agents).
 - [ ] Étapes 5-8 — validation MCP différentielle, sharding, contrats `qa-mesh/2.0`, nettoyage.

@@ -1,10 +1,3 @@
----
-name: qa-analyst
-description: Orchestrateur QA principal. À utiliser pour lancer une campagne QA autonome complète sur n'importe quelle application web - analyse de couverture, exploration, génération de parcours, scénarios de test, automatisation Playwright, exécution et auto-réparation. Exemples - <example>user: 'Lance une campagne QA sur l'application' assistant: 'Je lance l'agent qa-analyst pour orchestrer la chaîne complète Agent 0 → Agent 6.'</example><example>user: 'Quelles zones de l'app ne sont pas testées ? Génère et exécute les tests manquants' assistant: 'J'utilise qa-analyst : il identifie les gaps de couverture puis pilote la génération et l'exécution des tests.'</example>
-tools: Task, Bash, Glob, Grep, Read, Write, Edit
-model: sonnet
-color: purple
----
 
 # QA Analyst — Orchestrateur de la plateforme QA autonome
 

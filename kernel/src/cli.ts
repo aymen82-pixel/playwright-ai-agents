@@ -2,6 +2,9 @@
 import { runValidate } from "./commands/validate";
 import { runJournal } from "./commands/journal";
 import { runDb } from "./commands/db";
+import { runFilter } from "./commands/filter";
+import { runManifest } from "./commands/manifest";
+import { runCompile } from "./commands/compile";
 
 const VERSION = "2.0.0-alpha.1";
 
@@ -16,6 +19,16 @@ Usage :
                   [--deliverable <path>] [--anomaly <msg> ...]
                   [--start <iso>] [--end <iso>] [--json]
       Ajoute une ligne JSONL à .qa/runs/<run_id>/pipeline.log.
+
+  qa-mesh filter --from <a> --to <b> <file|->   (transmission sélective)
+      Projette le payload selon l'arête from->to de .qa/routing.yaml.
+      Sort l'extrait JSON à injecter dans le prompt de l'agent cible.
+
+  qa-mesh manifest build   (migre .claude/agents/*.md -> agents/manifest.yaml + bodies)
+
+  qa-mesh compile --target <claude|opencode|codex|copilot|gemini> [--check] [--dry-run]
+      Génère les définitions d'agents + config MCP du runtime depuis le manifeste.
+      --check : compare au disque sans écrire (non-régression byte-identique).
 
   qa-mesh db <sous-commande> [options]   (AgentDB v2 — SQLite)
       init                          Crée .qa/agentdb/agentdb.sqlite + schéma.
@@ -47,6 +60,7 @@ function parse(argv: string[]): ParsedArgs {
   const bools = new Set<string>();
   const valued = new Set([
     "agent", "status", "deliverable", "anomaly", "start", "end", "qa-dir",
+    "from", "to", "target", "source",
     // db
     "domain", "page", "label", "primary", "fallback", "validated-by", "run-id",
     "for", "top", "stale", "out", "role", "storage-state", "expires",
@@ -131,6 +145,49 @@ function main(argv: string[]): number {
           json: args.bools.has("json"),
           qaDir,
         });
+        process.stdout.write(outcome.stdout + "\n");
+        return outcome.exitCode;
+      }
+      case "manifest": {
+        const subcommand = args.positionals[0];
+        if (!subcommand) {
+          process.stderr.write("manifest : sous-commande manquante (build)\n");
+          return 2;
+        }
+        const outcome = runManifest({
+          subcommand,
+          source: first(args, "source"),
+          json: args.bools.has("json"),
+          qaDir,
+        });
+        process.stdout.write(outcome.stdout + "\n");
+        return outcome.exitCode;
+      }
+      case "compile": {
+        const target = first(args, "target");
+        if (!target) {
+          process.stderr.write("compile : --target requis (claude|opencode|codex|copilot|gemini)\n");
+          return 2;
+        }
+        const outcome = runCompile({
+          target,
+          check: args.bools.has("check"),
+          dryRun: args.bools.has("dry-run"),
+          json: args.bools.has("json"),
+          qaDir,
+        });
+        process.stdout.write(outcome.stdout + "\n");
+        return outcome.exitCode;
+      }
+      case "filter": {
+        const file = args.positionals[0];
+        const from = first(args, "from");
+        const to = first(args, "to");
+        if (!file || !from || !to) {
+          process.stderr.write("filter : <file>, --from et --to sont requis\n");
+          return 2;
+        }
+        const outcome = runFilter({ file, from, to, qaDir });
         process.stdout.write(outcome.stdout + "\n");
         return outcome.exitCode;
       }

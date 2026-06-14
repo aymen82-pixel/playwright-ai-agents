@@ -1,0 +1,198 @@
+# Manifeste unique des agents qa-mesh/2.0 — SOURCE UNIQUE
+# Métadonnées ici ; corps prose dans agents/bodies/<name>.md (verbatim).
+# Régénéré par `qa-mesh manifest build`, compilé par `qa-mesh compile`.
+agents:
+  qa-a11y-auditor:
+    description: Agent A11Y — Auditeur d'accessibilité. À utiliser pour auditer l'accessibilité (WCAG 2.1 AA) des pages découvertes par l'Agent 1 via axe-core, en parallèle des autres spécialistes. Exemples - <example>Context: le catalogue de pages du domaine est disponible. assistant: 'Je lance qa-a11y-auditor en parallèle pour produire le rapport de violations WCAG.'</example><example>user: 'L'appli est-elle accessible ?' assistant: 'qa-a11y-auditor scanne les pages du domaine avec axe-core et classe les violations par impact.'</example>
+    model: haiku
+    color: pink
+    tools:
+      - Glob
+      - Grep
+      - Read
+      - Write
+      - Bash
+      - mcp__playwright-test__browser_navigate
+      - mcp__playwright-test__browser_snapshot
+      - mcp__playwright-test__browser_evaluate
+      - mcp__playwright-test__browser_set_storage_state
+      - mcp__playwright-test__browser_take_screenshot
+  qa-analyst:
+    description: Orchestrateur QA principal. À utiliser pour lancer une campagne QA autonome complète sur n'importe quelle application web - analyse de couverture, exploration, génération de parcours, scénarios de test, automatisation Playwright, exécution et auto-réparation. Exemples - <example>user: 'Lance une campagne QA sur l'application' assistant: 'Je lance l'agent qa-analyst pour orchestrer la chaîne complète Agent 0 → Agent 6.'</example><example>user: 'Quelles zones de l'app ne sont pas testées ? Génère et exécute les tests manquants' assistant: 'J'utilise qa-analyst : il identifie les gaps de couverture puis pilote la génération et l'exécution des tests.'</example>
+    model: sonnet
+    color: purple
+    tools:
+      - Task
+      - Bash
+      - Glob
+      - Grep
+      - Read
+      - Write
+      - Edit
+  qa-automation-engineer:
+    description: Agent 4 — Ingénieur d'automatisation. Extension du playwright-test-generator. À utiliser pour transformer des scénarios (Gherkin ou parcours JSON) en tests Playwright TypeScript avec Page Object Model, fixtures et sélecteurs persistés. Exemples - <example>Context: les scénarios automatisables sont prêts. assistant: 'Je lance qa-automation-engineer pour générer les POM et les specs Playwright.'</example><example>user: 'Automatise ces scénarios en Playwright' assistant: 'qa-automation-engineer va générer pages/, tests/ et fixtures/ en validant chaque étape via MCP.'</example>
+    model: sonnet
+    color: blue
+    tools:
+      - Glob
+      - Grep
+      - Read
+      - Write
+      - Edit
+      - mcp__playwright-test__generator_setup_page
+      - mcp__playwright-test__generator_read_log
+      - mcp__playwright-test__generator_write_test
+      - mcp__playwright-test__browser_click
+      - mcp__playwright-test__browser_drag
+      - mcp__playwright-test__browser_evaluate
+      - mcp__playwright-test__browser_file_upload
+      - mcp__playwright-test__browser_handle_dialog
+      - mcp__playwright-test__browser_hover
+      - mcp__playwright-test__browser_navigate
+      - mcp__playwright-test__browser_press_key
+      - mcp__playwright-test__browser_select_option
+      - mcp__playwright-test__browser_snapshot
+      - mcp__playwright-test__browser_type
+      - mcp__playwright-test__browser_verify_element_visible
+      - mcp__playwright-test__browser_verify_list_visible
+      - mcp__playwright-test__browser_verify_text_visible
+      - mcp__playwright-test__browser_verify_value
+      - mcp__playwright-test__browser_wait_for
+      - Bash
+  qa-compliance-checker:
+    description: Agent COMPLIANCE — Vérificateur de conformité RGPD / EU AI Act. À utiliser pour collecter les indices de conformité réglementaire observables sur l'application testée (consentement cookies, politique de confidentialité, transparence IA), en parallèle des autres spécialistes. Exemples - <example>Context: campagne avec option compliance activée. assistant: 'Je lance qa-compliance-checker en parallèle pour produire le rapport d'indices RGPD/AI Act.'</example><example>user: 'Sommes-nous prêts pour l'AI Act ?' assistant: 'qa-compliance-checker vérifie les exigences observables et liste les points à faire valider juridiquement.'</example>
+    model: sonnet
+    color: cyan
+    tools:
+      - Glob
+      - Grep
+      - Read
+      - Write
+      - mcp__playwright-test__browser_navigate
+      - mcp__playwright-test__browser_snapshot
+      - mcp__playwright-test__browser_evaluate
+      - mcp__playwright-test__browser_cookie_list
+      - mcp__playwright-test__browser_set_storage_state
+      - mcp__playwright-test__browser_take_screenshot
+  qa-context-discovery:
+    description: Agent 1 — Découverte de contexte. Extension du playwright-test-planner. À utiliser pour explorer un domaine d'une application via Playwright, inventorier pages/composants/APIs et produire un catalogue de contexte compressé avec sélecteurs persistés. Exemples - <example>Context: le QA Analyst a sélectionné le domaine 'checkout'. assistant: 'Je lance qa-context-discovery pour cartographier les pages et éléments du domaine checkout.'</example><example>user: 'Inventorie les composants de la page profil' assistant: 'qa-context-discovery va explorer la page et produire le catalogue compressé.'</example>
+    model: haiku
+    color: green
+    tools:
+      - Glob
+      - Grep
+      - Read
+      - Write
+      - Bash
+      - mcp__playwright-test__planner_setup_page
+      - mcp__playwright-test__browser_click
+      - mcp__playwright-test__browser_close
+      - mcp__playwright-test__browser_console_messages
+      - mcp__playwright-test__browser_drag
+      - mcp__playwright-test__browser_evaluate
+      - mcp__playwright-test__browser_file_upload
+      - mcp__playwright-test__browser_handle_dialog
+      - mcp__playwright-test__browser_hover
+      - mcp__playwright-test__browser_navigate
+      - mcp__playwright-test__browser_navigate_back
+      - mcp__playwright-test__browser_network_requests
+      - mcp__playwright-test__browser_press_key
+      - mcp__playwright-test__browser_select_option
+      - mcp__playwright-test__browser_snapshot
+      - mcp__playwright-test__browser_type
+      - mcp__playwright-test__browser_wait_for
+  qa-coverage-gap-analyzer:
+    description: Agent 0 — Analyse de couverture. À utiliser pour détecter les routes et fonctionnalités non couvertes par les tests Playwright existants et sélectionner le prochain domaine à tester. Exemples - <example>user: 'Quelles parties de l'app ne sont pas testées ?' assistant: 'Je lance qa-coverage-gap-analyzer pour scanner le dépôt et produire le rapport de gaps.'</example><example>Context: le QA Analyst démarre une campagne. assistant: 'Phase 1 : qa-coverage-gap-analyzer détermine le domaine prioritaire.'</example>
+    model: haiku
+    color: yellow
+    tools:
+      - Glob
+      - Grep
+      - Read
+      - Write
+      - Bash
+      - mcp__playwright-test__browser_navigate
+      - mcp__playwright-test__browser_snapshot
+      - mcp__playwright-test__browser_type
+      - mcp__playwright-test__browser_click
+      - mcp__playwright-test__browser_press_key
+      - mcp__playwright-test__browser_wait_for
+      - mcp__playwright-test__browser_evaluate
+  qa-healing-coordinator:
+    description: Agent 6 — Coordinateur d'auto-réparation. Extension du playwright-test-healer. À utiliser pour corriger automatiquement les tests Playwright en échec SCRIPT - sélecteurs alternatifs, retry contrôlé, rapport de correction. Exemples - <example>Context: qa-test-executor a classifié 3 échecs SCRIPT. assistant: 'Je lance qa-healing-coordinator pour réparer les tests cassés avec retry borné.'</example><example>user: 'Les tests du login sont cassés après le redesign, répare-les' assistant: 'qa-healing-coordinator va diagnostiquer, chercher des sélecteurs alternatifs et corriger.'</example>
+    model: sonnet
+    color: red
+    tools:
+      - Glob
+      - Grep
+      - Read
+      - Write
+      - Edit
+      - MultiEdit
+      - Bash
+      - mcp__playwright-test__browser_console_messages
+      - mcp__playwright-test__browser_evaluate
+      - mcp__playwright-test__browser_generate_locator
+      - mcp__playwright-test__browser_network_requests
+      - mcp__playwright-test__browser_snapshot
+      - mcp__playwright-test__test_debug
+      - mcp__playwright-test__test_list
+      - mcp__playwright-test__test_run
+  qa-journey-mapper:
+    description: Agent 2 — Cartographie des parcours utilisateurs. À utiliser pour transformer un catalogue de contexte (pages/éléments) en parcours utilisateurs typés (nominal, alternatif, erreur, limite). Exemples - <example>Context: qa-context-discovery vient de livrer le catalogue du domaine. assistant: 'Je lance qa-journey-mapper pour dériver les parcours NOM/ALT/ERR/LIMITE.'</example><example>user: 'Quels parcours utilisateurs faut-il tester sur ce module ?' assistant: 'qa-journey-mapper va cartographier les flux à partir du contexte découvert.'</example>
+    model: haiku
+    color: cyan
+    tools:
+      - Read
+      - Write
+  qa-perf-tester:
+    description: Agent PERF — Testeur de performance. À utiliser pour mesurer les Web Vitals (LCP, CLS, TTFB, FCP) contre des budgets définis et, si explicitement autorisé, lancer un test de charge k6. Exemples - <example>Context: le catalogue de pages du domaine est disponible. assistant: 'Je lance qa-perf-tester en parallèle pour mesurer les Web Vitals contre les budgets de la config.'</example><example>user: 'La page d'accueil est lente, mesure les performances' assistant: 'qa-perf-tester mesure LCP/CLS/TTFB sur les pages du domaine et compare aux budgets.'</example>
+    model: haiku
+    color: yellow
+    tools:
+      - Glob
+      - Grep
+      - Read
+      - Write
+      - Bash
+      - mcp__playwright-test__browser_navigate
+      - mcp__playwright-test__browser_evaluate
+      - mcp__playwright-test__browser_set_storage_state
+      - mcp__playwright-test__browser_start_tracing
+      - mcp__playwright-test__browser_stop_tracing
+  qa-product-owner:
+    description: Agent PO — Product Owner. À utiliser pour transformer une spécification fonctionnelle (SFD avec exigences F-NNN) en user stories US-NNN avec critères d'acceptation Given/When/Then. Étape 2 de la chaîne SDD, après qa-spec-writer et AVANT le checkpoint humain obligatoire. Exemples - <example>Context: la SFD vient d'être produite par qa-spec-writer. assistant: 'Je lance qa-product-owner pour découper la SFD en user stories avec critères d'acceptation, puis STOP pour revue humaine.'</example><example>user: 'Transforme cette spec en backlog de user stories' assistant: 'qa-product-owner génère les US-NNN tracées vers les exigences F-NNN, à valider avant automatisation.'</example>
+    model: sonnet
+    color: blue
+    tools:
+      - Read
+      - Write
+      - Glob
+      - Grep
+  qa-spec-writer:
+    description: Agent SPEC — Rédacteur de spécifications fonctionnelles. À utiliser pour transformer un brief, des notes de réunion ou un besoin exprimé en spécification fonctionnelle détaillée (SFD) structurée avec exigences identifiées F-NNN. Première étape de la chaîne SDD amont, avant qa-product-owner. Exemples - <example>user: 'Voici les notes de cadrage du module facturation, rédige la spec' assistant: 'Je lance qa-spec-writer pour produire la SFD structurée avec exigences F-NNN.'</example><example>Context: l'utilisateur invoque /qa-sdd avec un brief. assistant: 'qa-spec-writer transforme le brief en SFD, puis qa-product-owner en tirera les user stories.'</example>
+    model: sonnet
+    color: orange
+    tools:
+      - Read
+      - Write
+      - Glob
+      - Grep
+  qa-test-designer:
+    description: Agent 3 — Conception de tests (à lancer à la demande uniquement). À utiliser quand l'utilisateur veut des livrables de test manuels - fichiers Gherkin .feature, CSV compatible Xray/Zephyr/TestRail, matrice de tests priorisée. Exemples - <example>user: 'Génère les cas de test manuels en Gherkin pour ce domaine' assistant: 'Je lance qa-test-designer pour produire les .feature et le CSV Xray.'</example><example>user: 'Il me faut une matrice de tests importable dans Xray' assistant: 'qa-test-designer va générer le CSV et la matrice à partir des parcours.'</example>
+    model: sonnet
+    color: orange
+    tools:
+      - Read
+      - Write
+      - Glob
+  qa-test-executor:
+    description: Agent 5 — Exécuteur de tests. À utiliser pour lancer une suite Playwright, collecter les résultats et classifier chaque échec (produit, script, environnement). Exemples - <example>Context: les specs du domaine viennent d'être générées. assistant: 'Je lance qa-test-executor pour exécuter la suite et produire le rapport classifié.'</example><example>user: 'Lance les tests et dis-moi ce qui casse et pourquoi' assistant: 'qa-test-executor exécute la suite et classifie chaque échec PRODUIT/SCRIPT/ENV.'</example>
+    model: haiku
+    color: magenta
+    tools:
+      - Bash
+      - Read
+      - Write
+      - Glob
+      - Grep

@@ -54,7 +54,10 @@ par le QA Analyst avant transmission. C'est ce qui rend l'architecture portable 
 n'importe quel runtime capable de lire/écrire des fichiers peut héberger un agent.
 
 **Transmission sélective.** Le QA Analyst est l'unique détenteur des livrables
-complets et ne transmet à chaque agent que les champs qu'il consomme :
+complets et ne transmet à chaque agent que les champs qu'il consomme. Depuis
+qa-mesh/2.0, cette table est DÉCLARATIVE dans `.qa/routing.yaml` (source unique)
+et exécutée par `qa-mesh filter --from <a> --to <b>` — le tableau ci-dessous
+n'est plus que documentaire :
 
 | De → vers | Champs transmis |
 |---|---|

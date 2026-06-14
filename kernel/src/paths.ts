@@ -46,3 +46,8 @@ export function runsDir(qaDir: string): string {
 export function runDir(qaDir: string, runId: string): string {
   return join(runsDir(qaDir), runId);
 }
+
+/** Racine du projet = parent de `.qa`. */
+export function repoRoot(qaDir: string): string {
+  return dirname(qaDir);
+}

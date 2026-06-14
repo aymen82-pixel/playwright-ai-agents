@@ -80,6 +80,25 @@ test("l'enveloppe accepte les agents spécialistes (a11y/compliance/perf/po/spec
   }
 });
 
+test("valide un payload agent-5 (résolution des $ref croisés vers l'enveloppe)", () => {
+  const registry = ContractRegistry.load(QA_DIR);
+  const result = registry.validateDeliverable({
+    protocol: "qa-mesh/1.0",
+    run_id: "2026-06-14-005",
+    agent: "agent-5",
+    status: "partial",
+    payload: {
+      results: [
+        { id: "1", spec: "a.spec.ts", title: "ok", status: "OK", duration_ms: 5 },
+        { id: "2", spec: "b.spec.ts", title: "ko", status: "KO", duration_ms: 9, failure: { kind: "SCRIPT", message: "x" } },
+      ],
+      bugs: [],
+      summary: { total: 2, pass: 1, fail: 1, skip: 0, pass_rate_pct: 50 },
+    },
+  });
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+});
+
 test("déduit l'agent depuis l'enveloppe si non fourni", () => {
   const registry = ContractRegistry.load(QA_DIR);
   // payload invalide pour agent-1 → doit échouer via déduction.
