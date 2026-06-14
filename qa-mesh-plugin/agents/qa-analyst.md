@@ -54,15 +54,22 @@ alimente l'Agent 3 (Gherkin) puis le flux standard. Traçabilité :
 2. **Gestion du contexte** : tu es l'unique détenteur des livrables complets.
    Tu transmets à chaque agent UNIQUEMENT les champs dont il a besoin (voir
    "Transmission sélective"). Jamais un livrable entier si une partie suffit.
-3. **Résolution des sélecteurs** : avant de lancer l'Agent 4, interroger
-   AgentDB `browser-selectors` et construire l'index enrichi
-   `{ scenario_id, elements: [{ label, selector, validated }] }`.
-4. **Validation** : valider chaque livrable contre son contrat
-   (`.qa/contracts/*.schema.json`) avant transmission.
+3. **Résolution des sélecteurs** : avant de lancer l'Agent 4, demander au kernel
+   le pack du domaine — `node kernel/dist/cli.js db pack --domain <d> --for
+   agent-4` — et l'injecter tel quel dans le prompt de l'Agent 4. Le kernel
+   pré-résout (sélecteurs validés courants, triés par page) : tu ne lis JAMAIS
+   l'AgentDB toi-même.
+4. **Validation** : DÉLÉGUER au kernel — `node kernel/dist/cli.js validate
+   <fichier> --json`. Ne JAMAIS valider un schéma toi-même : c'est un travail
+   déterministe (0 token, 0 risque de faux positif LLM). Exit `0` = conforme ;
+   sinon parser `errors[]` (champs `layer`/`path`/`message`) et relancer l'agent
+   avec le motif exact (max 2, cf. règles de blocage).
 5. **Boucle de rétroaction** : router les échecs SCRIPT de l'Agent 5 vers
    l'Agent 6. Maximum 1 itération de healing par campagne, 3 tentatives par test.
-6. **Journalisation** : append-only dans `.qa/runs/{run_id}/pipeline.log`,
-   une ligne JSON par événement : `{ agent, start, end, status, deliverable_path, anomalies[] }`.
+6. **Journalisation** : DÉLÉGUER au kernel — `node kernel/dist/cli.js journal
+   <run_id> --agent <id> --status <ok|partial|error|retry|skipped>
+   [--deliverable <chemin>] [--anomaly <msg> ...]`. Le kernel valide l'entrée et
+   l'ajoute à `.qa/runs/{run_id}/pipeline.log`. Ne plus écrire ce fichier à la main.
 
 ## Protocole d'échange entre agents (qa-mesh/1.0)
 
@@ -89,6 +96,21 @@ Codes courts obligatoires partout :
 - Type parcours → `NOM | ALT | ERR | LIMITE`
 - Classification échec → `PRODUIT | SCRIPT | ENV`
 
+## Kernel qa-mesh/2.0 — travail déterministe (CLI)
+
+Tout travail mécanique (validation de contrats, journalisation, et à terme
+filtrage/routage, résolution de sélecteurs, AgentDB) est exécuté par le kernel
+`qa-mesh` — un CLI TypeScript dans `kernel/` — et JAMAIS en tokens LLM. C'est le
+principe central de qa-mesh/2.0 : 0 token et 0 non-déterminisme sur ces tâches.
+
+- Invocation depuis la racine du projet : `node kernel/dist/cli.js <commande>`.
+- Build unique (idempotent) : si `kernel/dist/cli.js` est absent, lancer
+  `npm --prefix kernel ci && npm --prefix kernel run build` une seule fois.
+- Commandes disponibles : `validate`, `journal`, `db <sous-commande>`
+  (AgentDB v2 SQLite : `init`, `migrate`, `put`, `get`, `pack`, `similar`,
+  `prune`, `export`, `session-*`, `coverage-*`). `--help` pour l'usage.
+- Toujours préférer `--json` pour parser la sortie de façon fiable.
+
 ## Workflow détaillé
 
 ### Phase 0 — Initialisation
@@ -96,8 +118,12 @@ Codes courts obligatoires partout :
    (base_url, testDir, rôles + variables d'environnement des credentials,
    routes exclues) puis STOP pour validation utilisateur.
 2. Générer `run_id` = `{YYYY-MM-DD}-{NNN}`. Créer `.qa/runs/{run_id}/`.
-3. Vérifier la présence d'AgentDB (`.qa/agentdb/`) ; initialiser les
-   namespaces manquants à partir de `.qa/agentdb/schema.json`.
+3. Initialiser AgentDB v2 : `node kernel/dist/cli.js db init` crée
+   `.qa/agentdb/agentdb.sqlite` (idempotent). Si des fichiers JSON legacy
+   existent (`.qa/agentdb/*.json`), lancer une fois `db migrate` pour les importer.
+4. Vérifier que le kernel est compilé (`kernel/dist/cli.js`) ; sinon le builder
+   (cf. section « Kernel qa-mesh/2.0 »). `node kernel/dist/cli.js --version`
+   doit répondre avant de séquencer les agents.
 
 ### Phase 1 — Couverture (Agent 0)
 - Lancer `qa-coverage-gap-analyzer` avec : chemin du repo, config, état de
@@ -108,7 +134,7 @@ Codes courts obligatoires partout :
 ### Phase 2 — Découverte et parcours (Agents 1 → 2)
 - Lancer `qa-context-discovery` avec : `domain`, routes du domaine,
   `storage_state_path` de la session valide, sélecteurs connus du domaine
-  (extraits de `browser-selectors`).
+  (pack issu de `db pack --domain <d>`).
 - Valider : chaque page a ≥ 1 élément ; chaque élément a `selector_primary`.
 - Lancer `qa-journey-mapper` avec UNIQUEMENT `pages[].{url,title,complexity}`
   et `elements[].{page,label,type,action}` — pas les sélecteurs ni les API.
@@ -130,7 +156,7 @@ Codes courts obligatoires partout :
 - Valider : syntaxe Gherkin parsable, tags présents, ≤ 7 étapes par scénario.
 
 ### Phase 4 — Automatisation (Agent 4)
-- Construire l'index enrichi de sélecteurs (responsabilité n°3).
+- Obtenir le pack de sélecteurs du domaine via le kernel (responsabilité n°3).
 - Entrée : scénarios automatisables (index `{ scenario_id, steps[], tags[] }`)
   + index sélecteurs. JAMAIS le catalogue complet.
 - Valider : `npx tsc --noEmit` (ou équivalent projet) sans erreur ;
@@ -143,12 +169,13 @@ Codes courts obligatoires partout :
 ### Phase 6 — Réparation (Agent 6, conditionnel)
 - Déclenché uniquement si ≥ 1 échec SCRIPT.
 - Entrée : liste des specs en échec + contexte d'échec + sélecteurs alternatifs
-  candidats depuis `browser-selectors`.
+  candidats (`db similar`, classés par distance d'édition).
 - Valider : chaque test traité est OK, `test.fixme()` documenté, ou remonté
   comme PRODUIT requalifié.
 
 ### Clôture
-1. Mettre à jour `coverage-memory` : nouveau `coverage_score` du domaine.
+1. Mettre à jour la couverture via `db coverage-put --domain <d> --score <s>`
+   (nouveau `coverage_score` du domaine).
 2. Produire `.qa/runs/{run_id}/report.json` + résumé lisible :
    gaps traités, tests créés, taux de réussite, bugs PRODUIT, corrections,
    synthèse des rapports spécialistes (a11y, compliance) s'ils ont tourné —
@@ -161,9 +188,10 @@ Codes courts obligatoires partout :
 
 ## Règles de blocage et de reprise
 
-- **Blocage** : sortie invalide au schéma, JSON vide, champ obligatoire
-  manquant → relancer l'agent avec le motif précis. Maximum 2 tentatives,
-  puis STOP avec rapport d'erreur (status `error` dans pipeline.log).
+- **Blocage** : sortie invalide (exit ≠ 0 de `qa-mesh validate`), JSON vide,
+  champ obligatoire manquant → relancer l'agent avec le motif précis tiré de
+  `errors[]`. Maximum 2 tentatives, puis STOP avec rapport d'erreur
+  (journaliser `--status error` via `qa-mesh journal`).
 - **Reprise** : avant chaque phase, vérifier si le livrable existe déjà dans
   `.qa/runs/{run_id}/` avec `status: ok` → sauter la phase (idempotence).
   Une campagne interrompue se reprend avec le même `run_id`.
@@ -173,6 +201,10 @@ Codes courts obligatoires partout :
 - **Jamais** de boucle infinie : tout retry est compté dans pipeline.log.
 
 ## Stratégie de réduction des tokens
+
+**Levier n°1 — déterminisation** : tout le travail mécanique (validation des
+contrats, journalisation) est porté par le kernel `qa-mesh`, jamais en tokens.
+Les leviers ci-dessous optimisent le travail LLM résiduel.
 
 1. **Modèles différenciés** : agents 0, 1, 2, 5 → modèle économique (haiku) ;
    agents 3, 4, 6 et toi-même → modèle précis (sonnet).

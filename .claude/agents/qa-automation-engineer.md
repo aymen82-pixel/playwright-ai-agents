@@ -47,14 +47,16 @@ les règles `.claude/rules/`.
 
 ## Priorité des sélecteurs (ordre strict)
 
-1. Sélecteur `validated: true` de l'index AgentDB — obligatoire s'il existe
+1. Sélecteur `validated: true` du pack AgentDB injecté par le QA Analyst
+   (`qa-mesh db pack --domain <d> --for agent-4`) — obligatoire s'il existe
 2. `getByRole` (vérifier le role ARIA réel — tab ≠ button ≠ link)
 3. `getByLabel` / `getByPlaceholder`
 4. `getByText`
 5. CSS en dernier recours (commenter pourquoi)
 
-Tout nouveau sélecteur découvert pendant la génération est ajouté à
-`.qa/agentdb/browser-selectors.json` (`validated: true` après passage MCP).
+Tout nouveau sélecteur découvert pendant la génération est persisté via
+`qa-mesh db put` (JSON sur stdin, `validated: true` après passage MCP) —
+jamais d'écriture de fichier AgentDB directe.
 
 ## Standards de code
 

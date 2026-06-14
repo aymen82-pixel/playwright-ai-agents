@@ -7,7 +7,7 @@
   "properties": {
     "protocol": { "const": "qa-mesh/1.0" },
     "run_id": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}-\\d{3}$" },
-    "agent": { "enum": ["agent-0", "agent-1", "agent-2", "agent-3", "agent-4", "agent-5", "agent-6", "qa-analyst"] },
+    "agent": { "enum": ["agent-0", "agent-1", "agent-2", "agent-3", "agent-4", "agent-5", "agent-6", "agent-a11y", "agent-compliance", "agent-perf", "agent-po", "agent-spec", "qa-analyst"] },
     "status": { "enum": ["ok", "partial", "error"] },
     "domain": { "type": "string" },
     "payload": { "type": "object" },

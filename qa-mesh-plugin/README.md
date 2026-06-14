@@ -1,4 +1,4 @@
-# qa-mesh — Plugin Claude Code
+# QA-mesh — Plugin Claude Code
 
 Plateforme QA autonome multi-agents Playwright, packagée pour être installée
 sur **n'importe quel projet d'automatisation** sans copier de fichiers.
@@ -26,6 +26,11 @@ mkdir .qa
 # copier .qa/contracts/ (schémas JSON inter-agents)
 
 # 3. Exporter les credentials
+
+# macOS / Linux
+export QA_DEFAULT_USER="..." QA_DEFAULT_PASSWORD="..."
+
+# Windows (PowerShell)
 $env:QA_DEFAULT_USER = "..."; $env:QA_DEFAULT_PASSWORD = "..."
 
 # 4. Lancer
@@ -49,11 +54,20 @@ aucune règle projet. Conforme au principe de neutralité de `ARCHITECTURE.md`.
 La source canonique de développement est `.claude/` du repo template.
 Pour resynchroniser le plugin après une évolution :
 
+**macOS / Linux**
+```bash
+rsync -a --delete .claude/agents/   qa-mesh-plugin/agents/
+rsync -a --delete .claude/commands/ qa-mesh-plugin/commands/
+rsync -a --delete .claude/skills/   qa-mesh-plugin/skills/
+cp .claude/hooks/qa-guard.js .claude/hooks/qa-typecheck.js qa-mesh-plugin/hooks/
+```
+
+**Windows (PowerShell)**
 ```powershell
-robocopy .claude\agents qa-mesh-plugin\agents /MIR
+robocopy .claude\agents   qa-mesh-plugin\agents   /MIR
 robocopy .claude\commands qa-mesh-plugin\commands /MIR
-robocopy .claude\skills qa-mesh-plugin\skills /MIR
-robocopy .claude\hooks qa-mesh-plugin\hooks qa-guard.js qa-typecheck.js
+robocopy .claude\skills   qa-mesh-plugin\skills   /MIR
+robocopy .claude\hooks    qa-mesh-plugin\hooks    qa-guard.js qa-typecheck.js
 ```
 
 Puis incrémenter `version` dans `.claude-plugin/plugin.json`.

@@ -49,6 +49,13 @@ coverage/
 .qa/agentdb/sessions/
 .qa/runs/
 .auth/
+# AgentDB v2 — base SQLite locale (l'export JSON `db export` reste versionnable)
+.qa/agentdb/*.sqlite
+.qa/agentdb/*.sqlite-wal
+.qa/agentdb/*.sqlite-shm
+
+# Kernel — sortie de compilation des tests
+kernel/dist-test/
 
 # Claude — perso (non committé)
 CLAUDE.local.md

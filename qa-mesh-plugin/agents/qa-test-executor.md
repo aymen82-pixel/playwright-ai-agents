@@ -35,9 +35,10 @@ uniquement.
      ne pas réparer.
    Indices de classification : type d'erreur Playwright, code HTTP, stack.
    En cas de doute entre PRODUIT et SCRIPT → `SCRIPT` (le healing tranchera).
-4. Pour tout échec SCRIPT « sélecteur non trouvé » : chercher dans
-   `.qa/agentdb/browser-selectors.json` le sélecteur le plus proche
-   (même page + label similaire) et l'inclure dans `suggested_fix`.
+4. Pour tout échec SCRIPT « sélecteur non trouvé » : demander au kernel le
+   sélecteur le plus proche (requête déterministe, pas de lecture LLM du JSON) —
+   `qa-mesh db similar --domain <d> --page <p> --label <l> --top 1 --json` —
+   et inclure le candidat dans `suggested_fix`.
 5. Bug report compact (PRODUIT uniquement) :
    `{ id, title, severity: C|E|M|F, steps[], expected, actual, evidence_path, scenario_id, suggested_fix }`.
 

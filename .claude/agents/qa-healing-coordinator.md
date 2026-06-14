@@ -19,7 +19,8 @@ Pour le diagnostic des tests flaky, appliquer la taxonomie du skill
 
 - Liste des tests en échec SCRIPT : `{ spec, title, failure }`
   (extrait du rapport de l'Agent 5 — uniquement les fichiers défaillants)
-- Sélecteurs alternatifs candidats depuis `.qa/agentdb/browser-selectors.json`
+- Sélecteurs alternatifs candidats : déjà classés par similarité par le kernel
+  (`qa-mesh db similar`) — injectés par le QA Analyst, ou requêtés au besoin
 - Sortie : `.qa/runs/{run_id}/healing_report.json`
 
 ## Workflow par test (MAXIMUM 3 tentatives par test, 1 passe globale)
@@ -30,12 +31,14 @@ Pour le diagnostic des tests flaky, appliquer la taxonomie du skill
    sélecteur obsolète | timing | assertion périmée | donnée dépendante |
    changement applicatif réel.
 3. **Sélecteur obsolète** — ordre de résolution :
-   1. AgentDB : sélecteur de même page + label identique ou similaire
+   1. Kernel : `qa-mesh db similar --domain <d> --page <p> --label <l> --json`
+      (même page, label identique ou proche par distance d'édition)
    2. `browser_generate_locator` sur l'élément retrouvé dans le snapshot
    3. Regex/locator résilient pour les données dynamiques
-   Après correction validée : mettre à jour l'entrée AgentDB
-   (`selector_primary` ← nouveau, ancien → `selector_fallback`,
-   `validated: true`).
+   Après correction validée : enregistrer une nouvelle version via
+   `qa-mesh db put` (`selector_primary` ← nouveau, ancien → `selector_fallback`,
+   `validated: true`). Le versioning append-only conserve l'historique : si le
+   fix dégrade d'autres tests du même POM, le rollback reste possible.
 4. **Correctif** : Edit minimal et ciblé. Si le sélecteur est dans un POM,
    corriger le POM (une seule fois) — pas chaque spec.
 5. **Vérification** : `test_run` sur le test corrigé. Échec → tentative

@@ -15,7 +15,8 @@ fichiers, tu croises, tu scores. Aucune règle métier — tout vient de
 ## Entrées (fournies par le QA Analyst)
 
 - `repo_path`, `.qa/qa.config.json` (base_url, testDir, routes exclues, rôles)
-- État courant de `.qa/agentdb/coverage-memory.json`
+- État de couverture courant : `qa-mesh db coverage-get --domain <d> --json`
+  (accès AgentDB EXCLUSIVEMENT via le kernel — jamais de lecture de fichier directe)
 - Chemin de sortie : `.qa/runs/{run_id}/gaps_coverage.json`
 
 ## Workflow
@@ -42,17 +43,19 @@ fichiers, tu croises, tu scores. Aucune règle métier — tout vient de
    cosmétique → `F`.
 
 5. **Session persistante** :
-   - Lire `.qa/agentdb/browser-sessions.json`. Si une session du rôle par
-     défaut est valide (`expires_at` futur) → la réutiliser.
+   - `qa-mesh db session-get --role <rôle> --json`. Si une session valide est
+     retournée (non expirée) → la réutiliser.
    - Sinon : exécuter la séquence de login décrite dans
-     `qa.config.json#auth.steps` via Playwright MCP, puis sauvegarder le
-     storageState dans `.qa/agentdb/sessions/{role}.json` et enregistrer
-     l'entrée `browser-sessions` (TTL par défaut : 24 h).
+     `qa.config.json#auth.steps` via Playwright MCP, sauvegarder le storageState
+     dans `.qa/agentdb/sessions/{role}.json` (fichier hors VCS), puis enregistrer
+     l'entrée via `qa-mesh db session-put --role <r> --storage-state <chemin>
+     --expires <iso>` (TTL par défaut : 24 h).
    - Les credentials viennent UNIQUEMENT de variables d'environnement
      référencées par la config — jamais en clair dans un livrable.
 
-6. **Mise à jour mémoire** : écrire les scores dans
-   `.qa/agentdb/coverage-memory.json`.
+6. **Mise à jour mémoire** : écrire les scores via
+   `qa-mesh db coverage-put --domain <d> --score <s> [--routes-hash <h>]`
+   (le `routes_hash` permet au kernel de détecter un domaine inchangé).
 
 ## Livrable (contrat agent-0.schema.json)
 
