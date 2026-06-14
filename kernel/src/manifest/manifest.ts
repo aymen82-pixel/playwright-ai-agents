@@ -88,13 +88,19 @@ export function compileClaudeAgent(meta: AgentMeta, body: string): string {
  * Sérialise le manifeste en YAML (sous-ensemble lu par src/routing/yaml.ts) :
  * mapping `agents` indexé par nom, corps stockés à part.
  */
-export function serializeManifest(metas: AgentMeta[]): string {
+export function serializeManifest(metas: AgentMeta[], rules: string[] = []): string {
   const lines: string[] = [
     "# Manifeste unique des agents qa-mesh/2.0 — SOURCE UNIQUE",
     "# Métadonnées ici ; corps prose dans agents/bodies/<name>.md (verbatim).",
     "# Régénéré par `qa-mesh manifest build`, compilé par `qa-mesh compile`.",
-    "agents:",
   ];
+  if (rules.length) {
+    // Doctrine partagée (sélecteurs, interdits) — source unique, plus de
+    // duplication dans les prompts. Injectée dans les runtimes sans .claude/rules.
+    lines.push("rules:");
+    for (const r of rules) lines.push(`  - ${r}`);
+  }
+  lines.push("agents:");
   for (const m of metas) {
     lines.push(`  ${m.name}:`);
     lines.push(`    description: ${m.description}`);
@@ -104,6 +110,12 @@ export function serializeManifest(metas: AgentMeta[]): string {
     for (const t of m.tools) lines.push(`      - ${t}`);
   }
   return lines.join("\n") + "\n";
+}
+
+/** Lit la liste des fichiers de règles partagées déclarés dans le manifeste. */
+export function readRules(parsed: unknown): string[] {
+  const rules = (parsed as { rules?: unknown })?.rules;
+  return Array.isArray(rules) ? rules.map(String) : [];
 }
 
 /** Lit le manifeste parsé (objet de src/routing/yaml.ts) en liste d'AgentMeta. */

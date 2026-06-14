@@ -9,6 +9,8 @@ import { contractsDir } from "./paths";
 export interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
+  /** Avertissements non bloquants (ex. protocole déprécié). */
+  warnings: string[];
 }
 
 export interface ValidationError {
@@ -88,12 +90,19 @@ export class ContractRegistry {
    */
   validateDeliverable(doc: unknown, agent?: string): ValidationResult {
     const errors: ValidationError[] = [];
+    const warnings: string[] = [];
 
     if (!this.envelopeValidate(doc)) {
       errors.push(...mapErrors(this.envelopeValidate.errors, "envelope"));
     }
 
-    const envelope = (doc ?? {}) as { agent?: string; payload?: unknown };
+    const envelope = (doc ?? {}) as { agent?: string; payload?: unknown; protocol?: string };
+
+    // Dépréciation du protocole 1.0 (grâce d'une campagne) — non bloquant.
+    if (envelope.protocol === "qa-mesh/1.0") {
+      warnings.push("protocole qa-mesh/1.0 DÉPRÉCIÉ — migrer vers qa-mesh/2.0.");
+    }
+
     const agentId = agent ?? envelope.agent;
 
     if (agentId && this.payloadValidators.has(agentId)) {
@@ -104,7 +113,7 @@ export class ContractRegistry {
     }
     // qa-analyst (report.json) n'a pas de contrat de payload → enveloppe seule.
 
-    return { valid: errors.length === 0, errors };
+    return { valid: errors.length === 0, errors, warnings };
   }
 }
 

@@ -38,7 +38,7 @@ matériau source devient une **question ouverte**, pas une hypothèse silencieus
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "agent": "agent-spec",
   "status": "ok",
   "domain": "",

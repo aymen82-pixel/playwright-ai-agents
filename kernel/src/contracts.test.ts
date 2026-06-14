@@ -8,7 +8,7 @@ const QA_DIR = resolve(__dirname, "..", "..", ".qa");
 
 function envelope(overrides: Record<string, unknown> = {}): unknown {
   return {
-    protocol: "qa-mesh/1.0",
+    protocol: "qa-mesh/2.0",
     run_id: "2026-06-13-001",
     agent: "agent-1",
     status: "ok",
@@ -31,9 +31,23 @@ test("charge tous les contrats du projet", () => {
   assert.ok(!agents.includes("envelope"), "l'enveloppe n'est pas un agent");
 });
 
-test("valide un livrable agent-1 conforme", () => {
+test("valide un livrable agent-1 conforme (protocole 2.0, sans warning)", () => {
   const registry = ContractRegistry.load(QA_DIR);
   const result = registry.validateDeliverable(envelope());
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+  assert.deepEqual(result.warnings, []);
+});
+
+test("accepte qa-mesh/1.0 mais émet un warning de dépréciation", () => {
+  const registry = ContractRegistry.load(QA_DIR);
+  const result = registry.validateDeliverable(envelope({ protocol: "qa-mesh/1.0" }));
+  assert.equal(result.valid, true, "1.0 reste valide pendant la grâce");
+  assert.ok(result.warnings.some((w) => /DÉPRÉCIÉ/.test(w)));
+});
+
+test("accepte le champ schema_version sur l'enveloppe 2.0", () => {
+  const registry = ContractRegistry.load(QA_DIR);
+  const result = registry.validateDeliverable(envelope({ schema_version: "2.0" }));
   assert.equal(result.valid, true, JSON.stringify(result.errors));
 });
 

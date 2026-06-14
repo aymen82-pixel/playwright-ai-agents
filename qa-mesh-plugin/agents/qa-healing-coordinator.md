@@ -61,7 +61,7 @@ Pour le diagnostic des tests flaky, appliquer la taxonomie du skill
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "agent": "agent-6",
   "status": "ok",
   "domain": "",
@@ -80,8 +80,8 @@ Pour le diagnostic des tests flaky, appliquer la taxonomie du skill
 
 ## Règles
 
-- Correctifs robustes et maintenables, pas de hacks (jamais de
-  `waitForTimeout`, jamais d'attente `networkidle`).
+- Correctifs robustes et maintenables, pas de hacks. Respecter les interdits de
+  `.claude/rules/testing.md` (source unique : jamais `waitForTimeout`/`networkidle`).
 - Documenter chaque fix : cause racine + nature du changement, une ligne.
 - Ne jamais affaiblir une assertion pour faire passer un test : si l'attendu
   est faux, le corriger ; si l'app est fausse, requalifier PRODUIT.

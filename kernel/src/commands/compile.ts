@@ -2,8 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { findQaDir, repoRoot } from "../paths";
 import { parseYaml } from "../routing/yaml";
-import { readManifest, type AgentMeta } from "../manifest/manifest";
-import { compileTarget, TARGETS, type OutputFile, type Target } from "../manifest/targets";
+import { readManifest, readRules, type AgentMeta } from "../manifest/manifest";
+import { compileTarget, TARGETS, type OutputFile, type RuleFile, type Target } from "../manifest/targets";
 
 export interface CompileOptions {
   target: string;
@@ -27,8 +27,8 @@ export function runCompile(opts: CompileOptions): CompileOutcome {
   const target = opts.target as Target;
   const root = repoRoot(opts.qaDir ?? findQaDir());
 
-  const agents = loadAgents(root);
-  const outputs = compileTarget(target, agents);
+  const { agents, rules } = loadAgents(root);
+  const outputs = compileTarget(target, agents, rules);
 
   if (opts.check) {
     return runCheck(root, outputs, opts.json);
@@ -59,20 +59,25 @@ interface AgentInput {
   body: string;
 }
 
-function loadAgents(root: string): AgentInput[] {
+function loadAgents(root: string): { agents: AgentInput[]; rules: RuleFile[] } {
   const agentsDir = join(root, "agents");
   const manifestPath = join(agentsDir, "manifest.yaml");
   if (!existsSync(manifestPath)) {
     throw new Error(`manifest.yaml introuvable : ${manifestPath} (lancer 'qa-mesh manifest build').`);
   }
-  const metas = readManifest(parseYaml(readFileSync(manifestPath, "utf8")));
-  return metas.map((meta) => {
+  const parsed = parseYaml(readFileSync(manifestPath, "utf8"));
+  const agents = readManifest(parsed).map((meta) => {
     const bodyPath = join(agentsDir, "bodies", `${meta.name}.md`);
     if (!existsSync(bodyPath)) {
       throw new Error(`Corps manquant pour ${meta.name} : ${bodyPath}`);
     }
     return { meta, body: readFileSync(bodyPath, "utf8") };
   });
+  // Règles partagées (doctrine source unique) — contenu lu depuis le projet.
+  const rules: RuleFile[] = readRules(parsed)
+    .filter((p) => existsSync(join(root, p)))
+    .map((p) => ({ path: p, content: readFileSync(join(root, p), "utf8") }));
+  return { agents, rules };
 }
 
 /** Compare chaque sortie au fichier sur disque — preuve de non-régression. */

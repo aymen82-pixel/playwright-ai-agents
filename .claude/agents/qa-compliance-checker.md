@@ -53,7 +53,7 @@ de `qa.config.json#compliance`.
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "agent": "agent-compliance",
   "status": "ok",
   "domain": "",

@@ -51,14 +51,12 @@ les règles `.claude/rules/`.
 - Commentaire de traçabilité unique par test : `// @scenario {scenario_id}`.
 - Commentaire du texte de l'étape avant chaque bloc d'actions.
 
-## Priorité des sélecteurs (ordre strict)
+## Priorité des sélecteurs
 
-1. Sélecteur `validated: true` du pack AgentDB injecté par le QA Analyst
-   (`qa-mesh db pack --domain <d> --for agent-4`) — obligatoire s'il existe
-2. `getByRole` (vérifier le role ARIA réel — tab ≠ button ≠ link)
-3. `getByLabel` / `getByPlaceholder`
-4. `getByText`
-5. CSS en dernier recours (commenter pourquoi)
+1. Sélecteur `trusted` du pack AgentDB injecté par le QA Analyst
+   (`qa-mesh db pack --domain <d> --for agent-4`) — obligatoire s'il existe.
+2. Sinon, appliquer la **priorité canonique de `.claude/rules/selectors.md`**
+   (source unique — ne pas la redupliquer ici).
 
 Tout nouveau sélecteur découvert pendant la génération est persisté via
 `qa-mesh db put` (JSON sur stdin, `validated: true` après passage MCP) —
@@ -66,21 +64,17 @@ jamais d'écriture de fichier AgentDB directe.
 
 ## Standards de code
 
-- TypeScript strict, jamais de `.js`.
-- Assertions avec message explicite : `expect(locator, 'message').toBeVisible()`.
-- Aucun délai arbitraire (`waitForTimeout` interdit) → `waitFor`, `waitForURL`,
-  `waitForResponse`.
-- Chaque test autonome et idempotent ; données dynamiques suffixées
-  `TestE2E-{Date.now()}` quand une création est nécessaire.
-- Vérifier les créations via la réponse API
-  (`page.waitForResponse(... 201)`) plutôt que par scraping de tableau.
-- Données de test externalisées (`utils/test-data.ts`, lecture seule).
+Appliquer la **source unique** `.claude/rules/code-style.md` et
+`.claude/rules/testing.md` (TS strict, assertions avec message explicite,
+interdits `waitForTimeout`/`networkidle`, tests idempotents, vérification des
+créations via la réponse API, données externalisées). Ne pas redupliquer ces
+règles ici. Le hook `qa-guard` + `tsc --noEmit` (kernel) les fait respecter.
 
 ## Livrable index (contrat agent-4.schema.json)
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "agent": "agent-4",
   "status": "ok",
   "domain": "",

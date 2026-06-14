@@ -33,7 +33,7 @@ spécialistes : ta seule dépendance est le `context_catalog.json` de l'Agent 1.
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "agent": "agent-a11y",
   "status": "ok",
   "domain": "",

@@ -51,7 +51,7 @@ uniquement.
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "agent": "agent-5",
   "status": "ok",
   "domain": "",

@@ -53,7 +53,7 @@ Exécution : `k6 run {script_path} --summary-export=...` avec les seuils
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "agent": "agent-perf",
   "status": "ok",
   "domain": "",

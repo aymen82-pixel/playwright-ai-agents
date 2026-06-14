@@ -1,5 +1,6 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { existsSync } from "node:fs";
 import { findQaDir, repoRoot } from "../paths";
 import { parseAgentFile, serializeManifest, type AgentMeta } from "../manifest/manifest";
 
@@ -42,8 +43,14 @@ export function runManifest(opts: ManifestOptions): ManifestOutcome {
     writeFileSync(join(bodiesDir, `${meta.name}.md`), body, "utf8");
   }
 
+  // Règles partagées (doctrine source unique) : déclarées dans le manifeste.
+  const rulesDir = join(root, ".claude", "rules");
+  const rules = existsSync(rulesDir)
+    ? readdirSync(rulesDir).filter((f) => f.endsWith(".md")).sort().map((f) => `.claude/rules/${f}`)
+    : [];
+
   const manifestPath = join(agentsDir, "manifest.yaml");
-  writeFileSync(manifestPath, serializeManifest(metas), "utf8");
+  writeFileSync(manifestPath, serializeManifest(metas, rules), "utf8");
 
   const summary = { agents: metas.length, manifest: manifestPath, bodies: bodiesDir };
   return {

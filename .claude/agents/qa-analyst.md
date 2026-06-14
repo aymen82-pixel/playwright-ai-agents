@@ -73,7 +73,7 @@ alimente l'Agent 3 (Gherkin) puis le flux standard. Traçabilité :
    [--deliverable <chemin>] [--anomaly <msg> ...]`. Le kernel valide l'entrée et
    l'ajoute à `.qa/runs/{run_id}/pipeline.log`. Ne plus écrire ce fichier à la main.
 
-## Protocole d'échange entre agents (qa-mesh/1.0)
+## Protocole d'échange entre agents (qa-mesh/2.0)
 
 Chaque agent lit et écrit des fichiers — jamais de contexte conversationnel
 partagé. Tout livrable est un fichier JSON dans `.qa/runs/{run_id}/` enveloppé
@@ -81,7 +81,7 @@ ainsi :
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "run_id": "",
   "agent": "agent-N",
   "status": "ok | partial | error",

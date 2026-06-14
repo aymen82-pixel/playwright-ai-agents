@@ -48,7 +48,7 @@ exclues, commandes) vit dans `.qa/qa.config.json` (voir
 `.qa/qa.config.example.json`).
 
 **Échange par fichiers.** Les agents ne partagent jamais de contexte
-conversationnel. Chaque livrable est un JSON enveloppé `qa-mesh/1.0` écrit dans
+conversationnel. Chaque livrable est un JSON enveloppé `qa-mesh/2.0` écrit dans
 `.qa/runs/{run_id}/`, validé contre son schéma (`.qa/contracts/*.schema.json`)
 par le QA Analyst avant transmission. C'est ce qui rend l'architecture portable :
 n'importe quel runtime capable de lire/écrire des fichiers peut héberger un agent.
@@ -136,7 +136,7 @@ nécessaires en tant que fichiers séparés :
 
 Tous dans `.qa/contracts/` :
 
-- `envelope.schema.json` — enveloppe commune `qa-mesh/1.0` + définitions
+- `envelope.schema.json` — enveloppe commune `qa-mesh/2.0` + définitions
   partagées (priorités `C|E|M|F`, statuts `OK|KO|INS|IGN`, types
   `NOM|ALT|ERR|LIMITE`, échecs `PRODUIT|SCRIPT|ENV`)
 - `agent-0.schema.json` … `agent-6.schema.json` — payloads par agent

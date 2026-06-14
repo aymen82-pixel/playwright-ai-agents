@@ -178,5 +178,9 @@ Le kernel est ainsi invocable depuis n'importe quel emplacement du projet.
       Agent 4 n'écrit en direct que les étapes `trusted` d'un scénario déjà vert.
 - [x] **Étape 6** — journal dual-write SQLite (`db journal --run`) pour le dashboard ;
       sharding Agent 5 par feature (`--workers`/`--shard`).
-- [ ] Étapes 7-8 — contrats `qa-mesh/2.0` (schema_version), nettoyage doctrines dupliquées.
+- [x] **Étape 7** — contrats `qa-mesh/2.0` : protocole 2.0 (1.0 accepté mais
+      DÉPRÉCIÉ, `validate` émet un warning non bloquant) + champ `schema_version`.
+- [x] **Étape 8** — doctrine source unique : priorité sélecteurs / interdits
+      retirés des prompts (renvoi à `.claude/rules/`) ; `rules:` déclarées dans le
+      manifeste et injectées dans les bundles non-Claude (codex/copilot/gemini).
 - [ ] Étape 9 — Coverage Intelligence (voir COVERAGE-INTELLIGENCE.md).

@@ -35,11 +35,11 @@ API, persistance des sélecteurs, sortie JSON compressée (plus de plan Markdown
    - Détecter les états d'erreur accessibles sans données destructives
      (soumission vide, format invalide).
    - Classer la complexité : `simple | multi-step | conditional | role-based`.
-3. **Sélecteurs** — ordre strict :
+3. **Sélecteurs** :
    1. Vérifier d'abord les sélecteurs connus transmis : s'ils matchent encore,
       les marquer `validated: true` (ne pas en chercher de nouveaux).
-   2. Sinon dériver : getByRole (vérifier le role ARIA réel) > getByLabel /
-      getByPlaceholder > getByText > CSS en dernier recours.
+   2. Sinon dériver selon la **priorité canonique de `.claude/rules/selectors.md`**
+      (source unique — ne pas la redupliquer ici).
    3. Toujours fournir un `selector_fallback` d'une stratégie différente.
    4. Persister chaque sélecteur (nouveau ou revalidé) via le kernel — JAMAIS
       d'écriture de fichier directe. Envoyer un tableau JSON sur stdin :
@@ -52,7 +52,7 @@ API, persistance des sélecteurs, sortie JSON compressée (plus de plan Markdown
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "run_id": "",
   "agent": "agent-1",
   "status": "ok",

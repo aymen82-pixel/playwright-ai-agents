@@ -73,6 +73,18 @@ test("compileTarget claude : 13 agents + .mcp.json avec le serveur unique", () =
   assert.match(mcp!.content, /run-test-mcp-server/);
 });
 
+test("compileTarget bundle : injecte les règles partagées (doctrine, étape 8)", () => {
+  const agents = [
+    { meta: { name: "x", description: "d", model: "haiku", color: "pink", tools: ["Read"] }, body: "\n# x\n" },
+  ];
+  const rules = [{ path: ".claude/rules/selectors.md", content: "# Sélecteurs\nPriorité: getByRole d'abord." }];
+  const out = compileTarget("gemini", agents, rules);
+  const bundleFile = out.find((o) => o.path === "GEMINI.md");
+  assert.ok(bundleFile, "GEMINI.md attendu");
+  assert.match(bundleFile!.content, /Règles partagées/);
+  assert.match(bundleFile!.content, /Priorité: getByRole d'abord/);
+});
+
 test("compileTarget : chaque runtime émet sa config MCP", () => {
   const agents = [
     { meta: { name: "x", description: "d", model: "haiku", color: "pink", tools: ["Read"] }, body: "\n# x\n" },

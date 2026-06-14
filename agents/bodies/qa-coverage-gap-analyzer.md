@@ -54,7 +54,7 @@ fichiers, tu croises, tu scores. Aucune règle métier — tout vient de
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "run_id": "",
   "agent": "agent-0",
   "status": "ok",

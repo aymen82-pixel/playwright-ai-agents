@@ -16,7 +16,7 @@ function writeDeliverable(doc: unknown): string {
 
 test("1 -> 2 : projette pages et éléments, exclut sélecteurs et API", () => {
   const file = writeDeliverable({
-    protocol: "qa-mesh/1.0",
+    protocol: "qa-mesh/2.0",
     run_id: "2026-06-14-001",
     agent: "agent-1",
     status: "ok",
@@ -40,7 +40,7 @@ test("1 -> 2 : projette pages et éléments, exclut sélecteurs et API", () => {
 
 test("5 -> 6 : ne transmet QUE les échecs SCRIPT", () => {
   const file = writeDeliverable({
-    protocol: "qa-mesh/1.0",
+    protocol: "qa-mesh/2.0",
     run_id: "2026-06-14-002",
     agent: "agent-5",
     status: "partial",
@@ -64,7 +64,7 @@ test("5 -> 6 : ne transmet QUE les échecs SCRIPT", () => {
 
 test("0 -> 1 : domain injecté depuis l'enveloppe si absent du payload", () => {
   const file = writeDeliverable({
-    protocol: "qa-mesh/1.0",
+    protocol: "qa-mesh/2.0",
     run_id: "2026-06-14-003",
     agent: "agent-0",
     status: "ok",
@@ -82,7 +82,7 @@ test("0 -> 1 : domain injecté depuis l'enveloppe si absent du payload", () => {
 });
 
 test("arête inconnue → code de sortie 2", () => {
-  const file = writeDeliverable({ protocol: "qa-mesh/1.0", agent: "agent-1", payload: {} });
+  const file = writeDeliverable({ protocol: "qa-mesh/2.0", agent: "agent-1", payload: {} });
   const out = runFilter({ file, from: "1", to: "9", routingPath: ROUTING });
   assert.equal(out.exitCode, 2);
   assert.match(JSON.parse(out.stdout).error, /Ar[êe]te inconnue/);

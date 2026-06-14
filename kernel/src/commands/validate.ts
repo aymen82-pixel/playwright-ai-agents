@@ -39,6 +39,7 @@ export function runValidate(opts: ValidateOptions): ValidateOutcome {
       valid: false,
       agent: opts.agent ?? null,
       errors: [{ layer: "envelope", path: "/", message: `JSON invalide : ${message}` }],
+      warnings: [],
     });
   }
 
@@ -49,6 +50,7 @@ export function runValidate(opts: ValidateOptions): ValidateOutcome {
     valid: result.valid,
     agent: agentId,
     errors: result.errors,
+    warnings: result.warnings,
   });
 }
 
@@ -56,6 +58,7 @@ interface Report {
   valid: boolean;
   agent: string | null;
   errors: { layer: string; path: string; message: string }[];
+  warnings: string[];
 }
 
 function emit(asJson: boolean | undefined, report: Report): ValidateOutcome {
@@ -63,12 +66,15 @@ function emit(asJson: boolean | undefined, report: Report): ValidateOutcome {
     return { exitCode: report.valid ? 0 : 1, stdout: JSON.stringify(report) };
   }
   const agent = report.agent ?? "?";
+  const warn = report.warnings.map((w) => `  ⚠ ${w}`);
   if (report.valid) {
-    return { exitCode: 0, stdout: `OK ${agent} — livrable conforme` };
+    const lines = [`OK ${agent} — livrable conforme`, ...warn];
+    return { exitCode: 0, stdout: lines.join("\n") };
   }
   const lines = [`KO ${agent} — ${report.errors.length} erreur(s) :`];
   for (const err of report.errors) {
     lines.push(`  [${err.layer}] ${err.path} ${err.message}`);
   }
+  lines.push(...warn);
   return { exitCode: 1, stdout: lines.join("\n") };
 }

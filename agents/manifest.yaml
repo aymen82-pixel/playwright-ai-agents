@@ -1,6 +1,10 @@
 # Manifeste unique des agents qa-mesh/2.0 — SOURCE UNIQUE
 # Métadonnées ici ; corps prose dans agents/bodies/<name>.md (verbatim).
 # Régénéré par `qa-mesh manifest build`, compilé par `qa-mesh compile`.
+rules:
+  - .claude/rules/code-style.md
+  - .claude/rules/selectors.md
+  - .claude/rules/testing.md
 agents:
   qa-a11y-auditor:
     description: Agent A11Y — Auditeur d'accessibilité. À utiliser pour auditer l'accessibilité (WCAG 2.1 AA) des pages découvertes par l'Agent 1 via axe-core, en parallèle des autres spécialistes. Exemples - <example>Context: le catalogue de pages du domaine est disponible. assistant: 'Je lance qa-a11y-auditor en parallèle pour produire le rapport de violations WCAG.'</example><example>user: 'L'appli est-elle accessible ?' assistant: 'qa-a11y-auditor scanne les pages du domaine avec axe-core et classe les violations par impact.'</example>

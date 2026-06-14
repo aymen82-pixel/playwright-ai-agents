@@ -19,11 +19,17 @@ interface AgentInput {
   body: string;
 }
 
+export interface RuleFile {
+  path: string;
+  content: string;
+}
+
 /**
  * Compile le manifeste vers les fichiers d'un runtime : définitions d'agents +
- * déclaration du serveur MCP (fin du drift, §7).
+ * déclaration du serveur MCP (fin du drift, §7). Les `rules` partagées sont
+ * injectées dans les bundles des runtimes sans `.claude/rules` (doctrine, §8).
  */
-export function compileTarget(target: Target, agents: AgentInput[]): OutputFile[] {
+export function compileTarget(target: Target, agents: AgentInput[], rules: RuleFile[] = []): OutputFile[] {
   switch (target) {
     case "claude":
       return [
@@ -51,19 +57,19 @@ export function compileTarget(target: Target, agents: AgentInput[]): OutputFile[
 
     case "codex":
       return [
-        { path: "AGENTS.md", content: bundle(agents, "Codex") },
+        { path: "AGENTS.md", content: bundle(agents, "Codex", rules) },
         { path: ".codex/config.toml", content: codexToml() },
       ];
 
     case "copilot":
       return [
-        { path: ".github/copilot-instructions.md", content: bundle(agents, "GitHub Copilot") },
+        { path: ".github/copilot-instructions.md", content: bundle(agents, "GitHub Copilot", rules) },
         { path: ".vscode/mcp.json", content: json({ servers: { "playwright-test": { command: MCP_COMMAND, args: MCP_ARGS } } }) },
       ];
 
     case "gemini":
       return [
-        { path: "GEMINI.md", content: bundle(agents, "Gemini CLI") },
+        { path: "GEMINI.md", content: bundle(agents, "Gemini CLI", rules) },
         { path: ".gemini/settings.json", content: json({ mcpServers: { "playwright-test": { command: MCP_COMMAND, args: MCP_ARGS } } }) },
       ];
   }
@@ -90,13 +96,25 @@ function opencodeAgent(a: AgentInput): string {
 }
 
 /** Bundle d'instructions unique (runtimes sans sous-agents fichiers dédiés). */
-function bundle(agents: AgentInput[], runtime: string): string {
+function bundle(agents: AgentInput[], runtime: string, rules: RuleFile[] = []): string {
   const parts = [
     `# Agents qa-mesh — bundle ${runtime} (généré par \`qa-mesh compile\`)`,
     "",
     "> Source unique : agents/manifest.yaml + agents/bodies/. Ne pas éditer ici.",
     "",
   ];
+  if (rules.length) {
+    parts.push("## Règles partagées (doctrine — source unique)");
+    parts.push("");
+    for (const r of rules) {
+      parts.push(`### ${r.path}`);
+      parts.push("");
+      parts.push(r.content.replace(/\r\n/g, "\n").trimEnd());
+      parts.push("");
+    }
+    parts.push("---");
+    parts.push("");
+  }
   for (const a of agents) {
     const body = a.body.replace(/\r\n/g, "\n").replace(/^\n+/, "");
     parts.push(`## ${a.meta.name} (${a.meta.model})`);

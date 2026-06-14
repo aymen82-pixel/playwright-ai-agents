@@ -42,7 +42,7 @@ automatique vers la conception de tests.
 
 ```json
 {
-  "protocol": "qa-mesh/1.0",
+  "protocol": "qa-mesh/2.0",
   "agent": "agent-po",
   "status": "ok",
   "domain": "",
