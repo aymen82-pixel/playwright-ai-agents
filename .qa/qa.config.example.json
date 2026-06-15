@@ -69,5 +69,16 @@
   "sdd": {
     "input_dir": "input",
     "output_dir": ".qa/sdd"
+  },
+  "coverage_intelligence": {
+    "$comment": "Priorisation par le risque (étape 9). Tous les champs sont optionnels — le kernel applique des défauts. Voir COVERAGE-INTELLIGENCE.md.",
+    "business_risk": { "checkout": 10, "login": 8, "profile": 2 },
+    "floors": { "checkout": 40, "payment": 40, "login": 30 },
+    "weights": { "business": 0.3, "criticality": 0.2, "failure": 0.2, "git": 0.2, "stability": 0.1 },
+    "max_staleness_days": 14,
+    "staleness_floor": 70,
+    "stability_window": 5,
+    "recency_tau_days": 14,
+    "path_domain_map": { "src/billing": "checkout" }
   }
 }

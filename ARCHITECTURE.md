@@ -68,6 +68,16 @@ n'est plus que documentaire :
 | 4 → 5 | chemins des specs + commande d'exécution |
 | 5 → 6 | uniquement les échecs SCRIPT + contexte + sélecteurs candidats |
 
+**Priorisation par le risque (Coverage Intelligence, étape 9).** Le kernel
+calcule un score de priorité déterministe par domaine (`qa-mesh prioritize`),
+somme pondérée de 5 facteurs mesurables — risque métier (config), criticité
+(graphe de parcours), taux d'échec (historique), activité git récente, stabilité
+(campagnes vertes consécutives) — avec plancher métier et plafond de péremption
+(anti-angle-mort). Le QA Analyst traite les domaines dans cet ordre et dimensionne
+le budget de chaque agent en conséquence. C'est un module du kernel, **pas un
+agent** : un score doit être reproductible et auditable. Détails :
+`COVERAGE-INTELLIGENCE.md`.
+
 **Budgets explicites.** Tous les retries sont bornés et configurables
 (`qa.config.json#budgets`) : 2 relances max par agent, 1 passe de healing,
 3 tentatives par test, 2 rafraîchissements de session par campagne.

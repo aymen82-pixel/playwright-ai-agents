@@ -67,6 +67,38 @@ CREATE TABLE IF NOT EXISTS scenario_runs (
 CREATE INDEX IF NOT EXISTS idx_scenario_runs_run ON scenario_runs(run_id);
 CREATE INDEX IF NOT EXISTS idx_scenario_runs_spec ON scenario_runs(spec, title);
 
+-- Coverage Intelligence (étape 9) — priorisation par le risque.
+CREATE TABLE IF NOT EXISTS ci_metrics (
+  entity_type    TEXT NOT NULL,
+  entity_key     TEXT NOT NULL,
+  domain         TEXT,
+  dependents     INTEGER,
+  users_impacted INTEGER,
+  depth          INTEGER,
+  frequency      REAL,
+  updated_at     TEXT,
+  PRIMARY KEY (entity_type, entity_key)
+);
+CREATE TABLE IF NOT EXISTS ci_git_activity (
+  path            TEXT PRIMARY KEY,
+  domain          TEXT,
+  last_changed_at TEXT,
+  commits_window  INTEGER,
+  recency_score   REAL
+);
+CREATE INDEX IF NOT EXISTS idx_ci_git_domain ON ci_git_activity(domain);
+CREATE TABLE IF NOT EXISTS ci_score_history (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id      TEXT,
+  entity_type TEXT,
+  entity_key  TEXT,
+  priority    INTEGER,
+  factors     TEXT,
+  reason      TEXT,
+  computed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ci_score_entity ON ci_score_history(entity_type, entity_key);
+
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 `;
 
@@ -141,6 +173,38 @@ export interface ScenarioResult {
   spec?: string | null;
   title?: string | null;
   status: string;
+}
+
+export interface CriticalityInput {
+  domain: string;
+  dependents?: number;
+  users_impacted?: number;
+  depth?: number;
+  frequency?: number;
+}
+
+export interface CriticalityRow {
+  domain: string;
+  dependents: number;
+  users_impacted: number;
+  depth: number;
+  frequency: number;
+}
+
+export interface GitActivityInput {
+  path: string;
+  domain: string | null;
+  last_changed_at: string;
+  commits_window: number;
+  recency_score: number;
+}
+
+export interface ScoreHistoryEntry {
+  entity_type: string;
+  entity_key: string;
+  priority: number;
+  factors: unknown;
+  reason: string[];
 }
 
 type Clock = () => string;
@@ -468,6 +532,148 @@ export class AgentDb {
          WHERE run_id = ? AND status = 'OK' ${domain ? "AND domain = ?" : ""}`,
       )
       .all(...params) as Array<{ spec: string | null; title: string | null; scenario_id: string | null }>;
+  }
+
+  // ---- Coverage Intelligence (étape 9) -------------------------------------
+
+  /** Upsert des entrées de criticité (depuis les parcours de l'Agent 2). */
+  putCriticality(input: CriticalityInput): void {
+    this.db
+      .prepare(
+        `INSERT INTO ci_metrics (entity_type, entity_key, domain, dependents, users_impacted, depth, frequency, updated_at)
+         VALUES ('domain', ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(entity_type, entity_key) DO UPDATE SET
+           domain = excluded.domain,
+           dependents = excluded.dependents,
+           users_impacted = excluded.users_impacted,
+           depth = excluded.depth,
+           frequency = excluded.frequency,
+           updated_at = excluded.updated_at`,
+      )
+      .run(
+        input.domain,
+        input.domain,
+        input.dependents ?? 0,
+        input.users_impacted ?? 0,
+        input.depth ?? 0,
+        input.frequency ?? 0,
+        this.now(),
+      );
+  }
+
+  /** Criticité brute par domaine (toutes les entrées domain-level). */
+  allCriticality(): CriticalityRow[] {
+    return this.db
+      .prepare(
+        `SELECT entity_key AS domain, dependents, users_impacted, depth, frequency
+         FROM ci_metrics WHERE entity_type = 'domain'`,
+      )
+      .all() as unknown as CriticalityRow[];
+  }
+
+  /** Remplace l'activité git (le `git log` de la fenêtre fait foi). */
+  replaceGitActivity(rows: GitActivityInput[]): void {
+    this.db.exec("BEGIN");
+    try {
+      this.db.exec("DELETE FROM ci_git_activity");
+      const stmt = this.db.prepare(
+        `INSERT INTO ci_git_activity (path, domain, last_changed_at, commits_window, recency_score)
+         VALUES (?, ?, ?, ?, ?)`,
+      );
+      for (const r of rows) {
+        stmt.run(r.path, r.domain, r.last_changed_at, r.commits_window, r.recency_score);
+      }
+      this.db.exec("COMMIT");
+    } catch (e) {
+      this.db.exec("ROLLBACK");
+      throw e;
+    }
+  }
+
+  /** Activité git agrégée par domaine (somme commits + somme récence). */
+  gitActivityByDomain(): Array<{ domain: string; commits: number; recency: number }> {
+    return this.db
+      .prepare(
+        `SELECT domain, SUM(commits_window) AS commits, SUM(recency_score) AS recency
+         FROM ci_git_activity WHERE domain IS NOT NULL AND domain <> ''
+         GROUP BY domain`,
+      )
+      .all() as Array<{ domain: string; commits: number; recency: number }>;
+  }
+
+  /** Taux de réussite par campagne pour un domaine, K plus récentes d'abord. */
+  runPassRates(domain: string, k: number): number[] {
+    const rows = this.db
+      .prepare(
+        `SELECT SUM(CASE WHEN status='OK' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS pass_rate
+         FROM scenario_runs WHERE domain = ?
+         GROUP BY run_id ORDER BY MAX(ts) DESC, run_id DESC LIMIT ?`,
+      )
+      .all(domain, k) as Array<{ pass_rate: number }>;
+    return rows.map((r) => r.pass_rate);
+  }
+
+  /** Nombre de campagnes vertes consécutives (les plus récentes) pour un domaine. */
+  greenStreak(domain: string): number {
+    const rows = this.db
+      .prepare(
+        `SELECT MIN(CASE WHEN status='OK' THEN 1 ELSE 0 END) AS all_green
+         FROM scenario_runs WHERE domain = ?
+         GROUP BY run_id ORDER BY MAX(ts) DESC, run_id DESC`,
+      )
+      .all(domain) as Array<{ all_green: number }>;
+    let streak = 0;
+    for (const r of rows) {
+      if (r.all_green === 1) streak++;
+      else break;
+    }
+    return streak;
+  }
+
+  /** Date du dernier passage du domaine (scenario_runs, sinon coverage). */
+  lastRunAt(domain: string): string | null {
+    const row = this.db
+      .prepare("SELECT MAX(ts) AS ts FROM scenario_runs WHERE domain = ?")
+      .get(domain) as { ts?: string | null } | undefined;
+    if (row?.ts) return row.ts;
+    const cov = this.getCoverage(domain);
+    return (cov?.updated_at as string | undefined) ?? null;
+  }
+
+  /** Tous les domaines connus, toutes tables confondues. */
+  knownDomains(): string[] {
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT domain FROM (
+           SELECT domain FROM selectors
+           UNION SELECT domain FROM coverage
+           UNION SELECT domain FROM scenario_runs
+           UNION SELECT entity_key AS domain FROM ci_metrics WHERE entity_type='domain'
+           UNION SELECT domain FROM ci_git_activity
+         ) WHERE domain IS NOT NULL AND domain <> ''`,
+      )
+      .all() as Array<{ domain: string }>;
+    return rows.map((r) => r.domain);
+  }
+
+  /** Persiste les scores calculés (audit + base de la stabilité). */
+  recordScores(runId: string, entries: ScoreHistoryEntry[]): number {
+    const ts = this.now();
+    this.db.exec("BEGIN");
+    try {
+      const stmt = this.db.prepare(
+        `INSERT INTO ci_score_history (run_id, entity_type, entity_key, priority, factors, reason, computed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      );
+      for (const e of entries) {
+        stmt.run(runId, e.entity_type, e.entity_key, e.priority, JSON.stringify(e.factors), JSON.stringify(e.reason), ts);
+      }
+      this.db.exec("COMMIT");
+    } catch (e) {
+      this.db.exec("ROLLBACK");
+      throw e;
+    }
+    return entries.length;
   }
 
   // ---- export / import -----------------------------------------------------

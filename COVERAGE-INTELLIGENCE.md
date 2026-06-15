@@ -1,7 +1,9 @@
 # Coverage Intelligence — design (qa-mesh/2.0, étape 9)
 
-> Statut : **décidé, non implémenté.** Capacité de priorisation par le risque.
-> Décision structurante (§10) : **module du kernel, PAS un Agent 7.**
+> Statut : **IMPLÉMENTÉ (14 juin 2026).** `qa-mesh prioritize`/`score`/`ci
+> put-metric` ; moteur pur `kernel/src/coverage/`, tables `ci_*`. Capacité de
+> priorisation par le risque. Décision structurante (§10) : **module du kernel,
+> PAS un Agent 7.**
 
 ## 0. Problème
 

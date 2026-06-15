@@ -137,6 +137,67 @@ test("pack annote trusted = validé ET frais", () => {
   db.close();
 });
 
+test("CI : criticité round-trip (put + allCriticality)", () => {
+  const db = AgentDb.open(":memory:");
+  db.putCriticality({ domain: "checkout", dependents: 4, depth: 3, users_impacted: 1000, frequency: 0.8 });
+  const rows = db.allCriticality();
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].domain, "checkout");
+  assert.equal(rows[0].dependents, 4);
+  assert.equal(rows[0].users_impacted, 1000);
+  db.close();
+});
+
+test("CI : greenStreak compte les campagnes vertes consécutives récentes", () => {
+  const db = AgentDb.open(":memory:");
+  db.recordResults("run-1", "checkout", [{ spec: "a", title: "t1", status: "OK" }, { spec: "a", title: "t2", status: "OK" }]);
+  db.recordResults("run-2", "checkout", [{ spec: "a", title: "t1", status: "OK" }, { spec: "a", title: "t2", status: "OK" }]);
+  assert.equal(db.greenStreak("checkout"), 2);
+  db.recordResults("run-3", "checkout", [{ spec: "a", title: "t1", status: "OK" }, { spec: "a", title: "t2", status: "KO" }]);
+  assert.equal(db.greenStreak("checkout"), 0, "campagne la plus récente non verte -> streak 0");
+  db.close();
+});
+
+test("CI : runPassRates retourne les taux par campagne, récent d'abord", () => {
+  const db = AgentDb.open(":memory:");
+  db.recordResults("run-1", "checkout", [{ spec: "a", title: "t1", status: "OK" }, { spec: "a", title: "t2", status: "OK" }]);
+  db.recordResults("run-2", "checkout", [{ spec: "a", title: "t1", status: "OK" }, { spec: "a", title: "t2", status: "KO" }]);
+  const rates = db.runPassRates("checkout", 5);
+  assert.deepEqual(rates, [0.5, 1]);
+  db.close();
+});
+
+test("CI : gitActivityByDomain agrège commits et récence", () => {
+  const db = AgentDb.open(":memory:");
+  db.replaceGitActivity([
+    { path: "pages/checkout/a.ts", domain: "checkout", last_changed_at: "2026-06-14T00:00:00Z", commits_window: 2, recency_score: 1.5 },
+    { path: "pages/checkout/b.ts", domain: "checkout", last_changed_at: "2026-06-13T00:00:00Z", commits_window: 1, recency_score: 0.5 },
+  ]);
+  const agg = db.gitActivityByDomain();
+  assert.equal(agg.length, 1);
+  assert.equal(agg[0].commits, 3);
+  assert.equal(agg[0].recency, 2);
+  db.close();
+});
+
+test("CI : knownDomains fait l'union de toutes les tables", () => {
+  const db = AgentDb.open(":memory:");
+  db.putSelector({ domain: "auth", page: "/login", label: "e", selector_primary: "#e", validated: true });
+  db.putCriticality({ domain: "checkout" });
+  const domains = db.knownDomains().sort();
+  assert.deepEqual(domains, ["auth", "checkout"]);
+  db.close();
+});
+
+test("CI : recordScores persiste l'historique", () => {
+  const db = AgentDb.open(":memory:");
+  const n = db.recordScores("2026-06-14", [
+    { entity_type: "domain", entity_key: "checkout", priority: 92, factors: { business: 1 }, reason: ["business_risk"] },
+  ]);
+  assert.equal(n, 1);
+  db.close();
+});
+
 test("export produit un dump JSON des trois namespaces", () => {
   const db = AgentDb.open(":memory:", fixedClock());
   db.putSelector({ domain: "auth", page: "/login", label: "email", selector_primary: "#e", validated: true });

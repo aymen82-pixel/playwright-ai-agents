@@ -105,7 +105,8 @@ principe central de qa-mesh/2.0 : 0 token et 0 non-déterminisme sur ces tâches
   sélective via `.qa/routing.yaml`), `db <sous-commande>` (AgentDB v2 SQLite :
   `init`, `migrate`, `put`, `get`, `pack`, `similar`, `prune`, `export`,
   `record-results`, `passed-scenarios`, `journal`, `session-*`, `coverage-*`),
-  `manifest build`, `compile`. `--help` pour l'usage.
+  `manifest build`, `compile`, `prioritize`/`score`/`ci put-metric` (Coverage
+  Intelligence, étape 9). `--help` pour l'usage.
 - Toujours préférer `--json` pour parser la sortie de façon fiable.
 
 ## Workflow détaillé
@@ -122,11 +123,18 @@ principe central de qa-mesh/2.0 : 0 token et 0 non-déterminisme sur ces tâches
    (cf. section « Kernel qa-mesh/2.0 »). `node kernel/dist/cli.js --version`
    doit répondre avant de séquencer les agents.
 
-### Phase 1 — Couverture (Agent 0)
+### Phase 1 — Couverture (Agent 0) + priorisation par le risque
 - Lancer `qa-coverage-gap-analyzer` avec : chemin du repo, config, état de
   `coverage-memory`.
 - Valider la sortie : `domain` non vide + `coverage_gaps[]` non vide.
 - Si aucun gap : rapporter "couverture complète" et clore la campagne.
+- **Coverage Intelligence** (étape 9) : obtenir l'ordre de traitement par le
+  risque via `node kernel/dist/cli.js prioritize --top <n> --json` (déterministe,
+  0 token) au lieu de prendre le premier gap. Traiter les domaines dans cet
+  ordre ; injecter `priority`/`reason` du domaine dans le prompt des agents pour
+  dimensionner leur budget (Agent 1 `max_pages`, Agent 2 profondeur de parcours,
+  Agent 4 rejeu live sur zone à risque, Agent 5 ordre d'exécution). Persister la
+  campagne avec `prioritize --record --run <run_id>`.
 
 ### Phase 2 — Découverte et parcours (Agents 1 → 2)
 - Lancer `qa-context-discovery` avec : `domain`, routes du domaine,
@@ -136,6 +144,11 @@ principe central de qa-mesh/2.0 : 0 token et 0 non-déterminisme sur ces tâches
 - Lancer `qa-journey-mapper` avec UNIQUEMENT `pages[].{url,title,complexity}`
   et `elements[].{page,label,type,action}` — pas les sélecteurs ni les API.
 - Valider : ≥ 1 parcours NOM et ≥ 1 parcours ERR par fonctionnalité.
+- **Criticité** (Coverage Intelligence) : dériver du graphe de parcours les
+  facteurs du domaine (nb de parcours dépendants, profondeur max, fréquence) et
+  les enregistrer via `node kernel/dist/cli.js ci put-metric --domain <d>
+  --dependents <n> --depth <n> --frequency <f>` — ils alimentent le facteur
+  `criticality` des campagnes suivantes.
 
 ### Phase 2-bis — Spécialistes (optionnel, parallèle)
 - Déclenchée sur demande explicite ou si `qa.config.json#specialists`

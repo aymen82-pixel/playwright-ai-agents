@@ -5,6 +5,7 @@ import { runDb } from "./commands/db";
 import { runFilter } from "./commands/filter";
 import { runManifest } from "./commands/manifest";
 import { runCompile } from "./commands/compile";
+import { runCoverage } from "./commands/coverage";
 
 const VERSION = "2.0.0-alpha.1";
 
@@ -46,6 +47,12 @@ Usage :
       session-put|session-get --role <r> [--storage-state --expires --session-id]
       coverage-put|coverage-get --domain <d> [--score --last-run --pass-rate --routes-hash]
 
+  qa-mesh prioritize [--top <n>] [--since <30d>] [--record [--run <id>]] [--json]
+      Priorise les domaines par le risque (Coverage Intelligence, étape 9).
+  qa-mesh score --domain <d> [--json]      Score détaillé d'un domaine.
+  qa-mesh ci put-metric --domain <d> [--dependents --depth --users --frequency]
+      Saisit les facteurs de criticité (depuis les parcours de l'Agent 2).
+
   qa-mesh --version | --help
 
 Résolution de .qa : $QA_DIR, sinon recherche ascendante depuis le cwd.`;
@@ -69,6 +76,8 @@ function parse(argv: string[]): ParsedArgs {
     "for", "top", "stale", "out", "role", "storage-state", "expires",
     "session-id", "score", "last-run", "pass-rate", "routes-hash",
     "run", "fresh",
+    // coverage intelligence (étape 9)
+    "since", "dependents", "depth", "users", "frequency",
   ]);
 
   for (let i = 0; i < argv.length; i++) {
@@ -204,6 +213,32 @@ function main(argv: string[]): number {
         const outcome = runDb({
           subcommand,
           positionals,
+          flags: args.flags,
+          bools: args.bools,
+          qaDir,
+        });
+        process.stdout.write(outcome.stdout + "\n");
+        return outcome.exitCode;
+      }
+      case "prioritize":
+      case "score": {
+        const outcome = runCoverage({
+          mode: command as "score" | "prioritize",
+          flags: args.flags,
+          bools: args.bools,
+          qaDir,
+        });
+        process.stdout.write(outcome.stdout + "\n");
+        return outcome.exitCode;
+      }
+      case "ci": {
+        const subcommand = args.positionals[0];
+        if (subcommand !== "put-metric") {
+          process.stderr.write("ci : sous-commande inconnue (put-metric)\n");
+          return 2;
+        }
+        const outcome = runCoverage({
+          mode: "put-metric",
           flags: args.flags,
           bools: args.bools,
           qaDir,

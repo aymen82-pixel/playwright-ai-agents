@@ -137,6 +137,27 @@ node kernel/dist/cli.js journal <run_id> --agent <id> \
 Valide l'entrée (schéma `run-journal` de `.qa/agentdb/schema.json`) puis l'ajoute
 en JSONL à `.qa/runs/<run_id>/pipeline.log`.
 
+### `prioritize` / `score` / `ci` — Coverage Intelligence (étape 9)
+
+Priorise les domaines par le risque (somme pondérée déterministe de 5 facteurs :
+risque métier, criticité, taux d'échec, activité git, stabilité). Plancher métier
+et plafond de péremption évitent les angles morts. Design : `COVERAGE-INTELLIGENCE.md`.
+
+```bash
+node kernel/dist/cli.js prioritize [--top <n>] [--since <30d>] [--record [--run <id>]] [--json]
+node kernel/dist/cli.js score --domain <d> [--json]    # score détaillé d'un domaine
+node kernel/dist/cli.js ci put-metric --domain <d> [--dependents --depth --users --frequency]
+```
+
+- `prioritize` calcule, ordonne (priorité décroissante) et explique (`reason[]`).
+  Lance `git log` une fois (fenêtre `--since`) pour le facteur d'activité récente.
+- Données sources : `business_risk`/`floors`/`weights` depuis
+  `qa.config.json#coverage_intelligence` (défauts si absent) ; criticité depuis
+  `ci put-metric` (Agent 2) ; échec/stabilité depuis `scenario_runs`
+  (`db record-results`) ; activité depuis git.
+- `--record` archive les scores dans `ci_score_history` (audit + base stabilité).
+- Sortie JSON : `[{domain, priority: 0-100, factors{}, reason[]}]`.
+
 ## Résolution de `.qa`
 
 `$QA_DIR` si défini, sinon recherche ascendante d'un dossier `.qa` depuis le cwd.
@@ -161,6 +182,9 @@ Le kernel est ainsi invocable depuis n'importe quel emplacement du projet.
 | `src/db/agentdb.ts` | `AgentDb` — wrapper SQLite (`node:sqlite`, WAL) |
 | `src/db/migrate.ts` | Migration JSON→SQLite + parseur de durée `--stale` |
 | `src/db/distance.ts` | Distance de Levenshtein (similarité healing) |
+| `src/commands/coverage.ts` | Commandes `prioritize`/`score`/`ci` + invocation git + config |
+| `src/ci/score.ts` | Moteur de scoring pur (5 facteurs, formule, garde-fous) |
+| `src/ci/git.ts` | Facteur git : mapping chemin→domaine + récence |
 | `src/paths.ts` | Résolution portable de `.qa` |
 
 ## Feuille de route (plan §9)
@@ -183,4 +207,8 @@ Le kernel est ainsi invocable depuis n'importe quel emplacement du projet.
 - [x] **Étape 8** — doctrine source unique : priorité sélecteurs / interdits
       retirés des prompts (renvoi à `.claude/rules/`) ; `rules:` déclarées dans le
       manifeste et injectées dans les bundles non-Claude (codex/copilot/gemini).
-- [ ] Étape 9 — Coverage Intelligence (voir COVERAGE-INTELLIGENCE.md).
+- [x] **Étape 9** — Coverage Intelligence : `prioritize`/`score`/`ci put-metric`,
+      5 facteurs (business/criticité/échec/git/stabilité), plancher métier +
+      plafond de péremption. Tables `ci_*`. Voir COVERAGE-INTELLIGENCE.md.
+
+**Plan §9 (étapes 1-9) : COMPLET.**
