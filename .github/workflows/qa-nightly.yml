@@ -1,11 +1,11 @@
-# Campagne QA nocturne — exécution shardée + healing à la demande.
+#Campagne QA nocturne — exécution shardée + healing à la demande.
 # Secrets requis : QA_DEFAULT_USER, QA_DEFAULT_PASSWORD, ANTHROPIC_API_KEY (job heal).
 # Variable requise : QA_BASE_URL (Settings → Variables).
 name: QA Nightly
 
 on:
-  schedule:
-    - cron: "0 2 * * *" # 02h00 UTC chaque nuit
+ # schedule:
+ # - cron: "0 2 * * *" # 02h00 UTC chaque nuit
   workflow_dispatch:
     inputs:
       heal:
@@ -102,3 +102,4 @@ jobs:
             branche qa-heal/{date}, committe les réparations et ouvre une PR
             vers master avec le healing_report.json en description.
           claude_args: "--allowedTools Bash,Read,Write,Edit,Glob,Grep"
+//
