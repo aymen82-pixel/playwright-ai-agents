@@ -26,7 +26,8 @@
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "node .claude/hooks/qa-guard.js" }
+          { "type": "command", "command": "node .claude/hooks/qa-guard.js" },
+          { "type": "command", "command": "node .claude/hooks/loop-guard.js" }
         ]
       }
     ],

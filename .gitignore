@@ -54,6 +54,12 @@ coverage/
 .qa/agentdb/*.sqlite-wal
 .qa/agentdb/*.sqlite-shm
 
+# Loops autonomes (v3) — artefacts de run (rapports, traces, historique régénéré) ;
+# loop.yaml/TASK.md/LOOP_INSTRUCTIONS.md versionnés (définition durable du loop)
+loops/*/outputs/*
+!loops/*/outputs/.gitkeep
+loops/*/PROGRESS.md
+
 # Kernel — sortie de compilation des tests
 kernel/dist-test/
 

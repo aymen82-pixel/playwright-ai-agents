@@ -198,6 +198,55 @@ test("CI : recordScores persiste l'historique", () => {
   db.close();
 });
 
+test("loops : recordLoopIteration + loopIterations triées", () => {
+  const db = AgentDb.open(":memory:");
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-1", iteration: 0, status: "running" });
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-1", iteration: 1, agent: "agent-5", verdict: "FAIL", motifs: ["script_failure"], status: "retry" });
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-1", iteration: 2, verdict: "PASS", status: "done" });
+  const rows = db.loopIterations("demo", "run-1");
+  assert.equal(rows.length, 3);
+  assert.equal(rows[1].verdict, "FAIL");
+  assert.deepEqual(rows[1].motifs, ["script_failure"]);
+  assert.equal(rows[2].status, "done");
+  db.close();
+});
+
+test("loops : loopStatus retourne la dernière itération connue", () => {
+  const db = AgentDb.open(":memory:");
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-1", iteration: 0, status: "running" });
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-1", iteration: 1, status: "retry" });
+  const status = db.loopStatus("demo");
+  assert.ok(status);
+  assert.equal(status!.iteration, 1);
+  assert.equal(status!.status, "retry");
+  assert.equal(db.loopStatus("inconnu"), null);
+  db.close();
+});
+
+test("loops : activeLoops exclut les loops terminés (done)", () => {
+  const db = AgentDb.open(":memory:");
+  db.recordLoopIteration({ loop_id: "a", run_id: "run-1", iteration: 0, status: "running" });
+  db.recordLoopIteration({ loop_id: "a", run_id: "run-1", iteration: 1, status: "done" });
+  db.recordLoopIteration({ loop_id: "b", run_id: "run-1", iteration: 0, status: "retry" });
+  const active = db.activeLoops();
+  const loopIds = active.map((r) => r.loop_id).sort();
+  assert.deepEqual(loopIds, ["b"], "loop 'a' terminé (done) exclu ; loop 'b' (retry) actif");
+  db.close();
+});
+
+test("loops : activeLoops est partitionné par (loop_id, run_id) — une escalade sur un run passé reste visible même si un run SUIVANT du même loop réussit", () => {
+  const db = AgentDb.open(":memory:");
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-1", iteration: 1, status: "running" });
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-1", iteration: 3, status: "needs_human" });
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-2", iteration: 1, status: "running" });
+  db.recordLoopIteration({ loop_id: "demo", run_id: "run-2", iteration: 1, status: "done" });
+  const active = db.activeLoops();
+  assert.equal(active.length, 1, "run-1 (needs_human) reste actif ; run-2 (done) est exclu");
+  assert.equal(active[0].run_id, "run-1");
+  assert.equal(active[0].status, "needs_human");
+  db.close();
+});
+
 test("export produit un dump JSON des trois namespaces", () => {
   const db = AgentDb.open(":memory:", fixedClock());
   db.putSelector({ domain: "auth", page: "/login", label: "email", selector_primary: "#e", validated: true });

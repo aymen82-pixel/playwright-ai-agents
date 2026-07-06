@@ -1,0 +1,12 @@
+# Loop autonome qa-mesh/2.0 (v3) — SOURCE UNIQUE de ce loop.
+# Lu exclusivement par le kernel (qa-mesh loop *) et le hook loop-guard.js.
+loop_id: demo-regression
+target: tests/ (suite de démo du repo qa-mesh)
+success_criteria: Suite verte, 0 échec SCRIPT/ENV
+max_iterations: 3
+allowed_agents:
+  - qa-test-executor
+  - qa-healing-coordinator
+whitelist:
+  - tests/**
+  - pages/**

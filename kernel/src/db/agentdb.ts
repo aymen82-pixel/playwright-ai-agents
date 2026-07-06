@@ -99,6 +99,20 @@ CREATE TABLE IF NOT EXISTS ci_score_history (
 );
 CREATE INDEX IF NOT EXISTS idx_ci_score_entity ON ci_score_history(entity_type, entity_key);
 
+-- Loops autonomes (v3) — cycle action/verification/decision, état persistant.
+CREATE TABLE IF NOT EXISTS loops (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  loop_id  TEXT NOT NULL,
+  run_id   TEXT NOT NULL,
+  iteration INTEGER NOT NULL,
+  agent    TEXT,
+  verdict  TEXT,
+  motifs   TEXT,
+  status   TEXT NOT NULL,
+  ts       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_loops_loop_run ON loops(loop_id, run_id);
+
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 `;
 
@@ -205,6 +219,29 @@ export interface ScoreHistoryEntry {
   priority: number;
   factors: unknown;
   reason: string[];
+}
+
+export type LoopStatus = "running" | "done" | "retry" | "needs_human";
+
+export interface LoopIterationInput {
+  loop_id: string;
+  run_id: string;
+  iteration: number;
+  agent?: string | null;
+  verdict?: string | null;
+  motifs?: string[] | null;
+  status: LoopStatus;
+}
+
+export interface LoopIterationRow {
+  loop_id: string;
+  run_id: string;
+  iteration: number;
+  agent: string | null;
+  verdict: string | null;
+  motifs: string[] | null;
+  status: LoopStatus;
+  ts: string;
 }
 
 type Clock = () => string;
@@ -676,6 +713,64 @@ export class AgentDb {
     return entries.length;
   }
 
+  // ---- Loops autonomes (v3) -------------------------------------------------
+
+  /** Enregistre une itération de loop (verdict et/ou décision). */
+  recordLoopIteration(entry: LoopIterationInput): void {
+    this.db
+      .prepare(
+        `INSERT INTO loops (loop_id, run_id, iteration, agent, verdict, motifs, status, ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.loop_id,
+        entry.run_id,
+        entry.iteration,
+        entry.agent ?? null,
+        entry.verdict ?? null,
+        entry.motifs && entry.motifs.length ? JSON.stringify(entry.motifs) : null,
+        entry.status,
+        this.now(),
+      );
+  }
+
+  /** Toutes les itérations d'un loop (et éventuellement d'un run précis), triées. */
+  loopIterations(loopId: string, runId?: string): LoopIterationRow[] {
+    const rows = runId
+      ? this.db
+          .prepare("SELECT * FROM loops WHERE loop_id = ? AND run_id = ? ORDER BY id")
+          .all(loopId, runId)
+      : this.db.prepare("SELECT * FROM loops WHERE loop_id = ? ORDER BY id").all(loopId);
+    return (rows as Array<Record<string, unknown>>).map(rowToLoopIteration);
+  }
+
+  /** Dernière itération connue d'un loop (toutes campagnes confondues). */
+  loopStatus(loopId: string): LoopIterationRow | null {
+    const row = this.db
+      .prepare("SELECT * FROM loops WHERE loop_id = ? ORDER BY id DESC LIMIT 1")
+      .get(loopId) as Record<string, unknown> | undefined;
+    return row ? rowToLoopIteration(row) : null;
+  }
+
+  /** Tous les loops dont la dernière itération connue n'est pas `done`. */
+  /**
+   * Dernière itération connue de chaque (loop_id, run_id) qui n'est pas
+   * `done`. Partitionné PAR RUN, pas seulement par loop : une campagne
+   * escaladée en `needs_human` reste visible même si une campagne SUIVANTE
+   * du même loop réussit ensuite — ce sont deux incidents indépendants.
+   */
+  activeLoops(): LoopIterationRow[] {
+    const rows = this.db
+      .prepare(
+        `SELECT l.* FROM loops l
+         INNER JOIN (SELECT loop_id, run_id, MAX(id) AS max_id FROM loops GROUP BY loop_id, run_id) latest
+           ON l.loop_id = latest.loop_id AND l.run_id = latest.run_id AND l.id = latest.max_id
+         WHERE l.status <> 'done'`,
+      )
+      .all() as Array<Record<string, unknown>>;
+    return rows.map(rowToLoopIteration);
+  }
+
   // ---- export / import -----------------------------------------------------
 
   /** Dump complet pour versioning Git / mutualisation multi-repos. */
@@ -707,5 +802,18 @@ function toSelectorRow(r: Record<string, unknown>): SelectorRow {
     last_validated_at: r.last_validated_at == null ? null : String(r.last_validated_at),
     created_at: String(r.created_at),
     run_id: r.run_id == null ? null : String(r.run_id),
+  };
+}
+
+function rowToLoopIteration(r: Record<string, unknown>): LoopIterationRow {
+  return {
+    loop_id: String(r.loop_id),
+    run_id: String(r.run_id),
+    iteration: Number(r.iteration),
+    agent: r.agent == null ? null : String(r.agent),
+    verdict: r.verdict == null ? null : String(r.verdict),
+    motifs: r.motifs == null ? null : (JSON.parse(String(r.motifs)) as string[]),
+    status: String(r.status) as LoopStatus,
+    ts: String(r.ts),
   };
 }

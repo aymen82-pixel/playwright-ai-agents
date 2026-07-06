@@ -6,6 +6,7 @@ import { runFilter } from "./commands/filter";
 import { runManifest } from "./commands/manifest";
 import { runCompile } from "./commands/compile";
 import { runCoverage } from "./commands/coverage";
+import { runLoop } from "./commands/loop";
 
 const VERSION = "2.0.0-alpha.1";
 
@@ -53,6 +54,12 @@ Usage :
   qa-mesh ci put-metric --domain <d> [--dependents --depth --users --frequency]
       Saisit les facteurs de criticité (depuis les parcours de l'Agent 2).
 
+  qa-mesh loop init --loop <id> [--target --criteria --max-iterations --agents a,b --whitelist p1,p2] [--force]
+  qa-mesh loop verify --loop <id> --run <run_id> [--agent <a>] [--report <chemin>] [--json]
+  qa-mesh loop decide --loop <id> --run <run_id> [--max-iterations <n>] [--json]
+  qa-mesh loop status [--loop <id>] [--run <run_id>] [--json]
+      Loops autonomes (v3) : verdict et décision déterministes, PROGRESS.md généré.
+
   qa-mesh --version | --help
 
 Résolution de .qa : $QA_DIR, sinon recherche ascendante depuis le cwd.`;
@@ -78,6 +85,8 @@ function parse(argv: string[]): ParsedArgs {
     "run", "fresh",
     // coverage intelligence (étape 9)
     "since", "dependents", "depth", "users", "frequency",
+    // loops autonomes (v3)
+    "loop", "criteria", "max-iterations", "agents", "whitelist", "report",
   ]);
 
   for (let i = 0; i < argv.length; i++) {
@@ -239,6 +248,21 @@ function main(argv: string[]): number {
         }
         const outcome = runCoverage({
           mode: "put-metric",
+          flags: args.flags,
+          bools: args.bools,
+          qaDir,
+        });
+        process.stdout.write(outcome.stdout + "\n");
+        return outcome.exitCode;
+      }
+      case "loop": {
+        const subcommand = args.positionals[0];
+        if (!["init", "verify", "decide", "status"].includes(subcommand ?? "")) {
+          process.stderr.write("loop : sous-commande inconnue (init|verify|decide|status)\n\n" + USAGE + "\n");
+          return 2;
+        }
+        const outcome = runLoop({
+          mode: subcommand as "init" | "verify" | "decide" | "status",
           flags: args.flags,
           bools: args.bools,
           qaDir,
