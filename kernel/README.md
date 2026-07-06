@@ -158,6 +158,44 @@ node kernel/dist/cli.js ci put-metric --domain <d> [--dependents --depth --users
 - `--record` archive les scores dans `ci_score_history` (audit + base stabilité).
 - Sortie JSON : `[{domain, priority: 0-100, factors{}, reason[]}]`.
 
+### `loop` — Loops autonomes (v3)
+
+Cycle run → vérification → décision, déterministe. Le kernel calcule le
+verdict et tranche stop/retry/escalade — jamais un jugement LLM. Un `loop`
+vit dans `loops/<id>/` (`loop.yaml` source unique + `TASK.md` +
+`LOOP_INSTRUCTIONS.md` prose + `PROGRESS.md` généré + `outputs/<run_id>/`).
+
+```bash
+node kernel/dist/cli.js loop init --loop demo --target tests/checkout \
+  --whitelist "tests/checkout/**,pages/checkout*.page.ts" \
+  --agents qa-test-executor,qa-healing-coordinator [--max-iterations 3] [--force]
+
+node kernel/dist/cli.js loop verify --loop demo --run <run_id> --agent agent-5 --json
+node kernel/dist/cli.js loop decide --loop demo --run <run_id> --json
+node kernel/dist/cli.js loop status [--loop demo] [--run <run_id>] [--json]
+```
+
+- `verify` lit `loops/<id>/outputs/<run_id>/execution_report.json` (s'il
+  existe), valide le contrat (`ContractRegistry`, fail-closed si `.qa/contracts`
+  indisponible), calcule les fichiers modifiés (`git diff --name-only HEAD` +
+  fichiers non suivis) et combine 3 checks mécaniques : rapport Playwright
+  (seuls SCRIPT/ENV bloquent — un KO PRODUIT est un vrai bug, jamais un échec
+  de loop), conformité de contrat, fichiers modifiés ⊆ whitelist. Persiste le
+  verdict (`PASS`/`FAIL` + motifs) en base.
+- `decide` lit le dernier verdict en attente → `done` (PASS), `retry` (FAIL
+  sous `max_iterations`) ou `needs_human` (FAIL au plafond — jamais de retry
+  infini). Régénère `PROGRESS.md` (accumule l'historique de TOUTES les
+  campagnes du loop, jamais écrit à la main, plafonné à 10 lignes/itération).
+- `status` sans `--loop` liste les runs actifs (non `done`) — partitionné par
+  `(loop_id, run_id)` : une escalade sur un run passé reste visible même si un
+  run suivant du même loop réussit ensuite. Avec `--loop`, historique complet.
+- Hook `.claude/hooks/loop-guard.js` (PreToolUse) : bloque toute écriture hors
+  whitelist pendant qu'un loop est actif (le bookkeeping propre du loop,
+  `loops/<id>/*`, reste toujours autorisé). Fail-open si le kernel n'est pas
+  compilé ou la base indisponible.
+- Gabarit fonctionnel : `loops/demo-regression/` (sur la suite de tests de ce
+  repo) — copier le dossier, adapter `loop.yaml`, pour un nouveau loop.
+
 ## Résolution de `.qa`
 
 `$QA_DIR` si défini, sinon recherche ascendante d'un dossier `.qa` depuis le cwd.
@@ -185,6 +223,12 @@ Le kernel est ainsi invocable depuis n'importe quel emplacement du projet.
 | `src/commands/coverage.ts` | Commandes `prioritize`/`score`/`ci` + invocation git + config |
 | `src/ci/score.ts` | Moteur de scoring pur (5 facteurs, formule, garde-fous) |
 | `src/ci/git.ts` | Facteur git : mapping chemin→domaine + récence |
+| `src/commands/loop.ts` | Commandes `loop init/verify/decide/status` (v3) |
+| `src/loop/verify.ts` | Vérification pure : rapport Playwright + contrat + scope |
+| `src/loop/decide.ts` | Décision bornée pure : done/retry/needs_human |
+| `src/loop/whitelist.ts` | Glob minimal (littéral/`*`/`**`) — réutilisé par `loop-guard.js` |
+| `src/loop/config.ts` | Schéma `loop.yaml` (parse/sérialise) |
+| `src/loop/render.ts` | Rendu pur de `PROGRESS.md` depuis l'historique SQLite |
 | `src/paths.ts` | Résolution portable de `.qa` |
 
 ## Feuille de route (plan §9)
@@ -212,3 +256,10 @@ Le kernel est ainsi invocable depuis n'importe quel emplacement du projet.
       plafond de péremption. Tables `ci_*`. Voir COVERAGE-INTELLIGENCE.md.
 
 **Plan §9 (étapes 1-9) : COMPLET.**
+
+### v3 — Loops autonomes
+
+- [x] Cycle run → vérification → décision, déterministe (kernel/src/loop/).
+      `qa-mesh loop init|verify|decide|status`. Table `loops` (AgentDB),
+      hook `loop-guard.js` (whitelist), gabarit `loops/demo-regression/`.
+      Voir §« Loops autonomes (v3) » ci-dessous.
