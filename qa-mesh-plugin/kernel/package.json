@@ -1,0 +1,28 @@
+{
+  "name": "qa-mesh",
+  "version": "2.0.0-alpha.1",
+  "description": "Kernel déterministe qa-mesh/2.0 — validation des contrats (Ajv), journalisation, routage, AgentDB SQLite et compilation multi-runtimes. Sort le travail mécanique des LLM.",
+  "license": "ISC",
+  "type": "commonjs",
+  "bin": {
+    "qa-mesh": "dist/cli.js"
+  },
+  "main": "dist/cli.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "pretest": "tsc -p tsconfig.test.json",
+    "test": "node --test \"dist-test/**/*.test.js\""
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "typescript": "^5.9.3"
+  }
+}
