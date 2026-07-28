@@ -118,6 +118,56 @@ Pour un rapport lisible : `npm run report` (HTML Playwright) ou demandez à l'ag
   priorité (0-100) et la raison (`business_risk`, `recent_git_changes`, …).
 - **Partir d'un besoin écrit** (brief → spécifications → user stories) : `/qa-sdd`.
 
+### Étape 8 — Non-régression ciblée avec un loop (v3)
+
+**`/qa-campaign`** (étape 5) traite l'application entière, domaine par domaine.
+Pour ne re-tester **qu'un seul module** de façon bornée et déterministe
+(après un échec CI, une correction de sélecteur, ou en routine), utilisez un
+**loop** à la place : cycle *exécution → vérification → décision*, où c'est
+le kernel — pas un agent — qui calcule le verdict et tranche.
+
+**Créer le loop (une fois par module) :**
+
+```bash
+node kernel/dist/cli.js loop init --loop checkout-regression \
+  --target "tests/checkout (module paiement)" \
+  --whitelist "tests/checkout/**,pages/checkout*.page.ts" \
+  --agents qa-test-executor,qa-healing-coordinator \
+  --max-iterations 3
+```
+
+`--whitelist` définit les seuls fichiers que le loop a le droit de modifier —
+tout écrit en dehors est bloqué automatiquement (hook `loop-guard.js`) tant
+que le loop est actif.
+
+**Le lancer :**
+
+```
+Lance le loop "checkout-regression"
+```
+
+L'agent `qa-analyst` (section « Mode loop » de son prompt) exécute alors le
+cycle : test → `loop verify` (rapport Playwright + conformité + scope, 0
+jugement LLM) → `loop decide` → `done` (succès, stop), `retry` (échec sous 3
+tentatives, relance avec le motif), ou `needs_human` (échec persistant,
+escalade — jamais de boucle infinie). Un bug **PRODUIT** (vrai bug
+applicatif) n'est jamais un échec de loop, seuls SCRIPT/ENV le sont.
+
+**Suivre l'état :**
+
+```bash
+node kernel/dist/cli.js loop status                       # tous les loops actifs
+cat loops/checkout-regression/PROGRESS.md                 # historique lisible, généré automatiquement
+```
+
+**Quand utiliser quoi :**
+
+| Besoin | Commande |
+|---|---|
+| Couvrir toute l'application, découvrir de nouvelles zones | `/qa-campaign` (étape 5) |
+| Re-tester un module précis après un échec CI ou une correction | `loop verify` / `loop decide` sur un loop existant |
+| Non-régression périodique sur un module sensible | Loop dédié, relancé régulièrement |
+
 ### En cas de souci
 
 | Symptôme | Cause probable / solution |
@@ -127,6 +177,7 @@ Pour un rapport lisible : `npm run report` (HTML Playwright) ou demandez à l'ag
 | Connexion échoue | Vérifier `base_url`, `auth.steps` et les variables d'environnement (étape 3). |
 | Aucun test généré | Vérifier que `coverage_gaps` n'est pas vide (l'app est peut-être déjà couverte). |
 | Tests « flaky » | Ne jamais augmenter un timeout à l'aveugle — voir `.claude/rules/testing.md`. |
+| Écriture bloquée par `loop-guard` | Le fichier est hors de la `whitelist` d'un loop actif (étape 8) — élargissez `loops/<id>/loop.yaml` (toujours modifiable) ou attendez que le loop passe à `done`. |
 
 ## Structure
 
