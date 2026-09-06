@@ -191,10 +191,43 @@ cat loops/checkout-regression/PROGRESS.md                 # historique lisible, 
 .qa/               config projet, contrats qa-mesh, AgentDB (mémoire persistante)
 tests/             specs par feature : tests/<feature>/<feature>.<flux>.spec.ts
 pages/             Page Object Model (une classe par page)
-fixtures/          pages.fixture.ts — source unique de { test, expect }
+fixtures/          pages.fixture.ts — source unique de { test, expect } ET de apiRequest
+schemas/           schémas Zod des réponses API, par domaine : schemas/<domaine>/<ressource>.schema.ts
 utils/             test-data.ts (credentials via env), api-client.ts, helpers.ts
 examples/          exemples de plans de test
 ```
+
+## Tests API (mode API-first, Zod)
+
+Pour les cibles testées principalement via API plutôt que via UI (ex. cartographie
+d'endpoints), une fixture `apiRequest` est disponible depuis
+`fixtures/pages.fixture.ts` — indépendante de `use.baseURL` (utilisée par les
+tests UI), elle pointe vers `NOVA_API_URL` / `NOVA_API_TOKEN`.
+
+```ts
+import { test, expect } from '../../fixtures/pages.fixture';
+import { KnowledgeBaseSchema } from '../../schemas/nova/knowledge-base.schema';
+
+test('création nominale', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest('POST', process.env.NOVA_KB_ENDPOINT!, {
+    schema: KnowledgeBaseSchema,
+    data: { name: 'ma-base' },
+  });
+  expect(status).toBe(201);
+  expect(body.name).toBe('ma-base'); // body est typé depuis le schéma Zod
+});
+```
+
+Règles :
+- Chaque réponse API validée contre un schéma **Zod strict** (`.strict()`) défini
+  dans `schemas/<domaine>/`, jamais un `z.object()` ad hoc dans le test.
+- Un contrat rompu lève une erreur explicite (diff Zod) — jamais avalé silencieusement.
+- Tant qu'un contrat n'est pas confirmé, utiliser `UnknownSchema`
+  (`schemas/common.schema.ts`) en placeholder temporaire, jamais laissé tel
+  quel sur un endpoint validé.
+- Variables d'environnement requises non définies → `test.skip(...)` avec message
+  explicite, jamais un test qui échoue faute de configuration (voir
+  `tests/knowledge-base/knowledge-base.creation.spec.ts` pour l'exemple).
 
 ## Les agents
 

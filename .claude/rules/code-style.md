@@ -14,4 +14,9 @@
   le texte de l'étape en commentaire avant chaque bloc d'actions.
 - Imports : `{ test, expect }` depuis `fixtures/pages.fixture.ts`, jamais
   depuis `@playwright/test` dans les specs.
+- Tests API (mode API-first) : fixture `apiRequest` (depuis
+  `fixtures/pages.fixture.ts`) uniquement, jamais de `fetch`/`request` brut
+  dans un spec. Réponse toujours validée contre un schéma Zod `.strict()`
+  défini dans `schemas/<domaine>/<ressource>.schema.ts`, jamais un `z.object()`
+  ad hoc inline. Détail dans le README, section "Tests API (mode API-first, Zod)".
 - `npm run typecheck` doit passer avant toute livraison de code.
