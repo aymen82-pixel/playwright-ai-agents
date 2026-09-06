@@ -10,8 +10,8 @@ import { uniqueId } from '../../utils/test-data';
 
 test.describe('Nova — base de connaissances', () => {
   test.skip(
-    !process.env.NOVA_API_URL || !process.env.NOVA_KB_ENDPOINT,
-    'NOVA_API_URL / NOVA_KB_ENDPOINT non configurés — voir README section "Tests API (Nova)"',
+    !process.env.NOVA_API_URL || !process.env.NOVA_KB_ENDPOINT || !process.env.NOVA_API_TOKEN,
+    'NOVA_API_URL / NOVA_KB_ENDPOINT / NOVA_API_TOKEN non configurés — voir README section "Tests API (Nova)"',
   );
 
   // @scenario KB-NOM-01
@@ -26,15 +26,21 @@ test.describe('Nova — base de connaissances', () => {
       data: { name },
     });
 
-    expect(created.status, 'la création doit renvoyer 201').toBe(201);
-    expect(created.body.name, 'le nom renvoyé doit correspondre au nom envoyé').toBe(name);
+    try {
+      expect(created.status, 'la création doit renvoyer 201').toBe(201);
+      expect(created.body.name, 'le nom renvoyé doit correspondre au nom envoyé').toBe(name);
 
-    const list = await apiRequest('GET', endpoint, { schema: KnowledgeBaseListSchema });
+      const list = await apiRequest('GET', endpoint, { schema: KnowledgeBaseListSchema });
 
-    expect(
-      list.body.some((kb) => kb.id === created.body.id),
-      'la base créée doit apparaître dans le listing des bases de connaissances',
-    ).toBe(true);
+      expect(
+        list.body.some((kb) => kb.id === created.body.id),
+        'la base créée doit apparaître dans le listing des bases de connaissances',
+      ).toBe(true);
+    } finally {
+      // Nettoyage — évite d'accumuler des bases de connaissances sur l'environnement
+      // Nova partagé à chaque exécution (5 projets navigateurs × retries CI).
+      await apiRequest('DELETE', `${endpoint}/${created.body.id}`, { schema: UnknownSchema });
+    }
   });
 
   // @scenario KB-ERR-01
